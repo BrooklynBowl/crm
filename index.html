@@ -309,8 +309,10 @@ function buildControls(){
 
   const tb = document.getElementById('tabs');
   tb.innerHTML = '';
-  [['crm','CRM'], ['site','Сайт'], ['zp','ЗП']].forEach(([k, label]) => {
+  [['crm','CRM'], ['site','Сайт'], ['zp','ЗП'], ['promo','Промокоды']].forEach(([k, label]) => {
     if (k === 'site' && !state.data.site) return;
+    if (k === 'promo' && !(state.data.promo && state.data.promo.periods
+        && state.data.promo.periods.length)) return;
     const b = document.createElement('button');
     b.className = 'chip'; b.textContent = label;
     b.setAttribute('aria-pressed', k === state.tab);
@@ -318,7 +320,7 @@ function buildControls(){
     tb.appendChild(b);
   });
   document.getElementById('city').parentNode.style.display = state.tab === 'site' ? 'none' : '';
-  document.querySelector('.controls').style.display = state.tab === 'zp' ? 'none' : '';
+  document.querySelector('.controls').style.display = (state.tab === 'zp' || state.tab === 'promo') ? 'none' : '';
 
   const gr = document.getElementById('grans');
   gr.innerHTML = '';
@@ -457,6 +459,7 @@ function at(m, i){ return m && m.values[i] !== undefined ? m.values[i] : null; }
 
 function render(){
   if (state.tab === 'zp') { renderZp(); return; }
+  if (state.tab === 'promo') { renderPromo(); return; }
   const i = state.week;
   state.view = viewMetrics();
   let html = '';
@@ -940,6 +943,105 @@ function renderZp(){
   document.querySelectorAll('#zpm .chip').forEach(b => {
     b.onclick = () => { state.zpMonth = +b.dataset.m; render(); };
   });
+}
+
+/* ═════════ ВКЛАДКА ПРОМОКОДЫ ═════════
+   Данные — выгрузка из айки, вкладка «ПРОМИКИ 2026».
+   Онлайн/офлайн делится по списку кодов в строке 2 самой вкладки. */
+
+function promoList(){
+  const all = ((state.data.promo || {}).periods) || [];
+  return all.filter(p => p.kind === (state.promoKind || 'week'));
+}
+
+function promoDelta(cur, prev, field){
+  if (!prev) return null;
+  const a = cur[field], b = prev[field];
+  if (b === null || b === undefined || !b) return null;
+  return a - b;
+}
+
+function renderPromo(){
+  const box = document.getElementById('content');
+  const promo = state.data.promo || {};
+
+  if (promo.error) { box.innerHTML = '<div class="panel">Не получилось прочитать вкладку: ' + esc(promo.error) + '</div>'; return; }
+
+  if (!state.promoKind) state.promoKind = 'week';
+  const list = promoList();
+  if (!list.length) {
+    box.innerHTML = '<div class="panel">Нет выгрузок за ' + (state.promoKind === 'week' ? 'недели' : 'месяцы') + '.</div>';
+    return;
+  }
+  if (state.promoIdx === undefined || !list[state.promoIdx]) state.promoIdx = list.length - 1;
+  const p    = list[state.promoIdx];
+  const prev = list[state.promoIdx - 1] || null;
+
+  let html = '<div class="controls" style="margin-bottom:22px">' +
+    '<div class="field"><label>Детализация</label><div class="chips" id="pk">' +
+    [['week','Недели'],['month','Месяцы']].map(([k,l]) =>
+      '<button class="chip" data-k="' + k + '" aria-pressed="' + (k === state.promoKind) + '">' + l + '</button>').join('') +
+    '</div></div>' +
+    '<div class="field"><label>Период</label><select id="pp">' +
+    list.map((x, k) => '<option value="' + k + '"' + (k === state.promoIdx ? ' selected' : '') +
+      '>' + esc(x.label) + '</option>').join('') +
+    '</select></div></div>';
+
+  const tile = (name, val, unit, d) =>
+    '<div class="tile"><div class="name">' + name + '</div>' +
+    '<div class="val">' + fmt(val, unit) + '</div>' +
+    (d === null ? '' : '<div class="delta' + (d < 0 ? ' down' : '') + '">' + fmtDelta(d, unit) + '</div>') +
+    '</div>';
+
+  html += '<div class="tiles">' +
+    tile('Выручка по промокодам', p.total.revenue, '₽', promoDelta(p.total, prev && prev.total, 'revenue')) +
+    tile('Гостей', p.total.guests, '', promoDelta(p.total, prev && prev.total, 'guests')) +
+    tile('Сумма скидки', p.total.discount, '₽', promoDelta(p.total, prev && prev.total, 'discount')) +
+    tile('Сумма без скидки', p.total.gross, '₽', promoDelta(p.total, prev && prev.total, 'gross')) +
+    '</div>';
+
+  const share = x => p.total.revenue ? Math.round(x / p.total.revenue * 100) : 0;
+  html += '<div class="panel"><h2>Онлайн и офлайн</h2><table><thead><tr>' +
+    '<th>Группа</th><th>Выручка</th><th>Доля</th><th>Гостей</th><th>Скидка</th><th>Средний чек</th>' +
+    '</tr></thead><tbody>' +
+    [['Онлайн', p.online], ['Офлайн', p.offline]].map(([n, b]) =>
+      '<tr><td>' + n + '</td><td>' + fmt(b.revenue, '₽') + '</td><td>' + share(b.revenue) + '%</td>' +
+      '<td>' + fmt(b.guests, '') + '</td><td>' + fmt(b.discount, '₽') + '</td>' +
+      '<td>' + (b.guests ? fmt(b.revenue / b.guests, '₽') : '—') + '</td></tr>').join('') +
+    '<tr><td><b>Всего</b></td><td><b>' + fmt(p.total.revenue, '₽') + '</b></td><td></td>' +
+    '<td><b>' + fmt(p.total.guests, '') + '</b></td><td><b>' + fmt(p.total.discount, '₽') + '</b></td>' +
+    '<td><b>' + (p.total.guests ? fmt(p.total.revenue / p.total.guests, '₽') : '—') + '</b></td></tr>' +
+    '</tbody></table></div>';
+
+  html += '<div class="panel"><h2>По ТРЦ</h2><div class="scroll"><table><thead><tr>' +
+    '<th>ТРЦ</th><th>Выручка</th><th>Гостей</th><th>Скидка</th><th>Онлайн</th><th>Офлайн</th>' +
+    '</tr></thead><tbody>' +
+    p.venues.map(v => '<tr><td>' + esc(v.name.replace(/^BrooklynBowl\s*/i, '')) + '</td>' +
+      '<td>' + fmt(v.total.revenue, '₽') + '</td><td>' + fmt(v.total.guests, '') + '</td>' +
+      '<td>' + fmt(v.total.discount, '₽') + '</td>' +
+      '<td>' + fmt(v.online.revenue, '₽') + '</td><td>' + fmt(v.offline.revenue, '₽') + '</td></tr>').join('') +
+    '</tbody></table></div></div>';
+
+  html += '<div class="panel"><h2>По промокодам</h2><div class="scroll"><table><thead><tr>' +
+    '<th>Код</th><th>Группа</th><th>Выручка</th><th>Гостей</th><th>Скидка</th><th>Средний чек</th>' +
+    '</tr></thead><tbody>' +
+    p.codes.map(c => '<tr><td>' + esc(c.code) + '</td>' +
+      '<td class="mcol">' + (c.group === 'offline' ? 'офлайн' : 'онлайн') + '</td>' +
+      '<td>' + fmt(c.revenue, '₽') + '</td><td>' + fmt(c.guests, '') + '</td>' +
+      '<td>' + fmt(c.discount, '₽') + '</td>' +
+      '<td>' + (c.guests ? fmt(c.revenue / c.guests, '₽') : '—') + '</td></tr>').join('') +
+    '</tbody></table></div></div>';
+
+  html += '<p class="note">Онлайн и офлайн делятся по списку кодов в строке 2 вкладки «ПРОМИКИ 2026»: ' +
+    'что перечислено там — офлайн, всё остальное — онлайн. Новый код попадёт в онлайн сам, ' +
+    'чтобы перенести его в офлайн, допиши код в ту строку — код дашборда править не нужно. ' +
+    'Строки «… всего» и «Итого» из выгрузки в расчёт не берутся.</p>';
+
+  box.innerHTML = html;
+  document.querySelectorAll('#pk .chip').forEach(b => {
+    b.onclick = () => { state.promoKind = b.dataset.k; state.promoIdx = undefined; render(); };
+  });
+  document.getElementById('pp').onchange = e => { state.promoIdx = +e.target.value; render(); };
 }
 
 /* демо-суммы, пока адрес API не вписан */
