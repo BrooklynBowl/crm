@@ -356,7 +356,9 @@ function fmt(v, unit, dec){
   if (v === null || v === undefined || isNaN(v)) return '—';
   if (unit === 'time') { const m = Math.floor(v / 60), sec = Math.round(v % 60);
     return m + ':' + (sec < 10 ? '0' : '') + sec; }
-  if (unit === '%') return v.toFixed(dec === null || dec === undefined ? 1 : dec).replace('.', ',') + '%';
+  if (unit === '%') { const d = (dec === null || dec === undefined)
+    ? (Math.round(v) === v ? 0 : 1) : dec;
+    return v.toFixed(d).replace('.', ',') + '%'; }
   if (unit === '₽') return nf.format(Math.round(v)) + ' ₽';
   return nf.format(Math.round(v));
 }
@@ -364,7 +366,9 @@ function fmtDelta(d, unit, dec){
   if (d === null || d === undefined || isNaN(d)) return '—';
   const s = d > 0 ? '▲ +' : (d < 0 ? '▼ ' : '');
   if (unit === 'time') return s + Math.round(Math.abs(d)) + ' сек';
-  if (unit === '%') return s + d.toFixed(dec === null || dec === undefined ? 1 : dec).replace('.', ',') + ' п.п.';
+  if (unit === '%') { const k = (dec === null || dec === undefined)
+    ? (Math.round(d) === d ? 0 : 1) : dec;
+    return s + Math.abs(d).toFixed(k).replace('.', ',') + ' п.п.'; }
   if (unit === '₽') return s + nf.format(Math.round(d)) + ' ₽';
   return s + nf.format(Math.round(d));
 }
