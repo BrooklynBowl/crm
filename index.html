@@ -9,31 +9,19 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-/* ───────── настройки ───────── */
 :root{
-  --cream:#E8E5DE;
-  --white:#FFFFFF;
-  --ink:#191919;
-  --black:#000000;
-  --red:#FF2026;
-  --line:rgba(25,25,25,.14);
-  --mute:rgba(25,25,25,.55);
+  --cream:#E8E5DE; --white:#FFFFFF; --ink:#191919; --red:#FF2026;
+  --line:rgba(25,25,25,.14); --mute:rgba(25,25,25,.55);
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
-body{
-  background:var(--cream);
-  color:var(--ink);
+body{background:var(--cream);color:var(--ink);
   font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
-  font-size:15px;
-  line-height:1.5;
-  -webkit-font-smoothing:antialiased;
-}
-.wrap{max-width:1180px;margin:0 auto;padding:24px 20px 64px}
+  font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1240px;margin:0 auto;padding:24px 20px 64px}
 button{font-family:inherit;font-size:inherit;cursor:pointer}
 :focus-visible{outline:2px solid var(--red);outline-offset:2px}
 
-/* ───────── шапка ───────── */
 .top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:22px}
 .ball{width:34px;height:34px;border-radius:50%;background:var(--red);position:relative;flex:0 0 auto}
 .ball i{position:absolute;width:5px;height:5px;border-radius:50%;background:var(--cream)}
@@ -47,7 +35,6 @@ button{font-family:inherit;font-size:inherit;cursor:pointer}
 .btn:hover{border-color:var(--ink)}
 .btn-red{background:var(--red);border-color:var(--red);color:var(--white)}
 
-/* ───────── панель управления ───────── */
 .controls{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-end;
   background:var(--white);border-radius:16px;padding:16px 18px;margin-bottom:22px}
 .field{display:flex;flex-direction:column;gap:6px}
@@ -58,8 +45,7 @@ select{font-family:inherit;font-size:14px;padding:8px 12px;border:1px solid var(
 .chip{border:1px solid var(--line);background:var(--cream);border-radius:800px;padding:7px 14px;font-size:13px}
 .chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--white)}
 
-/* ───────── карточки ЗП ───────── */
-.frames{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:14px}
+.frames{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:14px}
 .frame{background:var(--white);border-radius:16px;overflow:hidden;display:flex;flex-direction:column}
 .frame .bar{background:var(--ink);color:var(--white);padding:11px 16px;font-size:13px;
   display:flex;justify-content:space-between;align-items:center;gap:10px}
@@ -78,19 +64,20 @@ select{font-family:inherit;font-size:14px;padding:8px 12px;border:1px solid var(
 .status.bad{background:var(--red);border-color:var(--red);color:var(--white)}
 .status.good{background:var(--ink);border-color:var(--ink);color:var(--white)}
 
-/* ───────── прочие показатели ───────── */
 .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:26px}
+.tiles.m{grid-template-columns:repeat(3,1fr)}
 .tile{background:var(--white);border-radius:16px;padding:15px 16px}
 .tile .name{font-size:13px;color:var(--mute);margin-bottom:8px}
 .tile .val{font-family:Oswald,sans-serif;font-size:28px;font-weight:500;
   font-variant-numeric:tabular-nums;line-height:1}
 .tile .row{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-top:6px}
+.tile .per{font-size:12px;color:var(--mute)}
 
-/* ───────── график ───────── */
 .panel{background:var(--white);border-radius:16px;padding:18px;margin-bottom:22px}
 .panel h2{font-family:Oswald,sans-serif;font-weight:500;font-size:19px;margin:0 0 14px}
 .panel .head{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
 .panel .head h2{margin:0}
+.hint{font-size:12px;color:var(--mute);margin:-6px 0 12px}
 .legend{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
 .lg{display:flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--cream);
   border-radius:800px;padding:6px 13px;font-size:13px}
@@ -100,21 +87,20 @@ select{font-family:inherit;font-size:14px;padding:8px 12px;border:1px solid var(
 svg.chart{display:block;width:100%;height:300px;overflow:visible}
 .tip{position:absolute;background:var(--ink);color:var(--white);border-radius:10px;padding:9px 12px;
   font-size:13px;pointer-events:none;opacity:0;transition:opacity .12s;white-space:nowrap;z-index:5}
-.tip b{font-weight:500}
 .tip div{display:flex;gap:8px;justify-content:space-between}
 
-/* ───────── таблица ───────── */
+.scroll{overflow-x:auto}
 table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
-th,td{text-align:right;padding:11px 10px;border-bottom:1px solid var(--line);font-size:14px}
-th{font-size:12px;color:var(--mute);font-weight:400;cursor:pointer;white-space:nowrap}
+th,td{text-align:right;padding:11px 9px;border-bottom:1px solid var(--line);font-size:14px;white-space:nowrap}
+th{font-size:12px;color:var(--mute);font-weight:400;cursor:pointer}
 th:first-child,td:first-child{text-align:left}
 th[aria-sort]:not([aria-sort="none"]){color:var(--ink)}
 tbody tr:last-child td{border-bottom:none}
 tfoot td{font-weight:500;border-top:2px solid var(--ink);border-bottom:none}
 .share{height:4px;border-radius:800px;background:var(--red);display:block;margin-top:5px}
 .tcity{font-size:12px;color:var(--mute);display:block}
+.mcol{color:var(--mute)}
 
-/* ───────── экран входа и состояния ───────── */
 .gate{max-width:400px;margin:14vh auto;background:var(--white);border-radius:16px;padding:26px}
 .gate h1{font-family:Oswald,sans-serif;font-weight:500;font-size:24px;margin:14px 0 6px}
 .gate p{color:var(--mute);font-size:14px;margin:0 0 18px}
@@ -128,7 +114,7 @@ tfoot td{font-weight:500;border-top:2px solid var(--ink);border-bottom:none}
 
 @media (max-width:900px){
   .frames{grid-template-columns:1fr}
-  .tiles{grid-template-columns:repeat(2,1fr)}
+  .tiles,.tiles.m{grid-template-columns:repeat(2,1fr)}
   .big{font-size:46px}
   .top h1{font-size:22px}
 }
@@ -137,7 +123,6 @@ tfoot td{font-weight:500;border-top:2px solid var(--ink);border-bottom:none}
 </head>
 <body>
 
-<!-- ══════════ ЭКРАН ВВОДА КОДА ══════════ -->
 <div id="gate" class="gate">
   <div class="ball"><i></i><i></i><i></i></div>
   <h1>Дашборд CRM</h1>
@@ -147,18 +132,14 @@ tfoot td{font-weight:500;border-top:2px solid var(--ink);border-bottom:none}
   <div class="err" id="gate-err"></div>
 </div>
 
-<!-- ══════════ ДАШБОРД ══════════ -->
 <div class="wrap hidden" id="app">
-
   <div class="top">
     <div class="ball"><i></i><i></i><i></i></div>
     <div>
       <h1>Дашборд CRM</h1>
       <div class="sub" id="updated">загружаем…</div>
     </div>
-    <div class="right">
-      <button class="btn" id="reload">Обновить</button>
-    </div>
+    <div class="right"><button class="btn" id="reload">Обновить</button></div>
   </div>
 
   <div class="controls">
@@ -176,36 +157,23 @@ tfoot td{font-weight:500;border-top:2px solid var(--ink);border-bottom:none}
     </div>
   </div>
 
-  <div id="content">
-    <div class="loading">Загружаем данные из таблицы…</div>
-  </div>
+  <div id="content"><div class="loading">Загружаем данные из таблицы…</div></div>
 
   <p class="note">
-    Данные берутся напрямую из Google-таблицы, вкладка «KPI CRM». Как только там заполнена новая
-    неделя — она появляется здесь после обновления страницы.
+    Данные берутся напрямую из Google-таблицы, вкладка «KPI CRM». Показатели с пометкой
+    «ежемесячно» обновляются раз в месяц — для них показано последнее заполненное значение.
   </p>
 </div>
 
 <script>
-/* ═══════════════════════════════════════════════════════
-   НАСТРОЙКИ — правится только этот блок
-   ═══════════════════════════════════════════════════════ */
+/* ═════════ НАСТРОЙКИ ═════════ */
 
-// Адрес веб-приложения Apps Script (заканчивается на /exec).
-// Пока пусто — страница показывает демо-данные.
-const API_URL = '';
+const API_URL = 'https://script.google.com/macros/s/AKfycbxGxbZoiXls5OY57E5_qIpwlvlkEMEUgVipSYZcCrooH8Mpqc_ft9iB2__OGQinX3jr/exec';
 
-// Планы по показателям. Проценты — в процентах, деньги — в рублях.
-const PLANS = {
-  ret1:  35,        // возврат гостей по карте гостя, %
-  ret2:  14,        // возврат гостей из базы, %
-  email: 22,        // открытия email, %
-  guests: null,     // null = плана нет, статус не показываем
-  rev:    null,
-  cards:  null
-};
+// Планы по зарплатным показателям, в процентах. null — плана нет.
+const PLANS = { ret: 35, email: 10 };
 
-// Какие ТРЦ к какому городу относятся (по куску названия)
+// Какие ТРЦ к какому городу относятся (по куску названия, маленькими буквами)
 const CITIES = {
   'Тюмень':          ['сити', 'остров', 'колумб'],
   'Ижевск':          ['петровск', 'матриц'],
@@ -216,53 +184,44 @@ const CITIES = {
   'Санкт-Петербург': ['июнь', 'кегли']
 };
 
-/* ═══════════════════════════════════════════════════════
-   Дальше менять ничего не нужно
-   ═══════════════════════════════════════════════════════ */
+/* ═════════ Дальше менять не нужно ═════════ */
 
-const SALARY = ['ret1', 'ret2', 'email'];
+const SALARY = ['ret', 'email'];
 const OTHER  = ['guests', 'rev', 'cards'];
-const COLORS = { ret1: '#FF2026', ret2: '#191919', email: '#8E887C' };
+const COLORS = { ret: '#FF2026', email: '#191919' };
 
-const state = { data: null, week: 0, range: 12, city: 'Все города', on: { ret1: 1, ret2: 1, email: 1 } };
+const state = { data: null, week: 0, range: 12, city: 'Все города', on: { ret: 1, email: 1 } };
 
-/* ─── вход ─── */
 const gate = document.getElementById('gate');
 const app  = document.getElementById('app');
 
-function savedKey() { try { return localStorage.getItem('bb-crm-key') || ''; } catch (e) { return ''; } }
-function saveKey(k) { try { localStorage.setItem('bb-crm-key', k); } catch (e) {} }
+function savedKey(){ try { return localStorage.getItem('bb-crm-key') || ''; } catch(e){ return ''; } }
+function saveKey(k){ try { localStorage.setItem('bb-crm-key', k); } catch(e){} }
 
 document.getElementById('gate-go').addEventListener('click', tryKey);
 document.getElementById('gate-key').addEventListener('keydown', e => { if (e.key === 'Enter') tryKey(); });
 
-function tryKey() {
+function tryKey(){
   const k = document.getElementById('gate-key').value.trim();
   if (!k) { document.getElementById('gate-err').textContent = 'Введи код'; return; }
-  saveKey(k);
-  start();
+  saveKey(k); start();
 }
-
-function openGate(msg) {
-  gate.classList.remove('hidden');
-  app.classList.add('hidden');
+function openGate(msg){
+  gate.classList.remove('hidden'); app.classList.add('hidden');
   document.getElementById('gate-err').textContent = msg || '';
 }
 
-/* ─── загрузка ─── */
-async function start() {
-  gate.classList.add('hidden');
-  app.classList.remove('hidden');
+async function start(){
+  gate.classList.add('hidden'); app.classList.remove('hidden');
   document.getElementById('content').innerHTML = '<div class="loading">Загружаем данные из таблицы…</div>';
-
-  if (!API_URL) { state.data = demoData(); afterLoad('демо-данные, адрес API ещё не вписан'); return; }
-
+  if (!API_URL) { state.data = demoData(); afterLoad('демо-данные, адрес API не вписан'); return; }
   try {
     const res  = await fetch(API_URL + '?key=' + encodeURIComponent(savedKey()));
     const json = await res.json();
     if (!json.ok) { openGate(json.error || 'Не получилось получить данные'); return; }
     state.data = json;
-    afterLoad(new Date(json.updated).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }));
+    afterLoad(new Date(json.updated).toLocaleString('ru-RU',
+      { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }));
   } catch (e) {
     document.getElementById('content').innerHTML =
       '<div class="panel">Таблица не отвечает. Проверь, что веб-приложение опубликовано ' +
@@ -270,17 +229,14 @@ async function start() {
   }
 }
 
-function afterLoad(stamp) {
+function afterLoad(stamp){
   document.getElementById('updated').textContent = 'обновлено ' + stamp;
   state.week = state.data.weeks.length - 1;
-  buildControls();
-  render();
+  buildControls(); render();
 }
-
 document.getElementById('reload').addEventListener('click', start);
 
-/* ─── элементы управления ─── */
-function buildControls() {
+function buildControls(){
   const w = document.getElementById('week');
   w.innerHTML = '';
   state.data.weeks.forEach((label, i) => {
@@ -296,8 +252,7 @@ function buildControls() {
   c.innerHTML = '';
   ['Все города'].concat(Object.keys(CITIES)).forEach(name => {
     const o = document.createElement('option');
-    o.value = name; o.textContent = name;
-    c.appendChild(o);
+    o.value = name; o.textContent = name; c.appendChild(o);
   });
   c.value = state.city;
   c.onchange = () => { state.city = c.value; render(); };
@@ -306,72 +261,62 @@ function buildControls() {
   r.innerHTML = '';
   [4, 8, 12, 26].forEach(n => {
     const b = document.createElement('button');
-    b.className = 'chip';
-    b.textContent = n + ' нед.';
+    b.className = 'chip'; b.textContent = n + ' нед.';
     b.setAttribute('aria-pressed', n === state.range);
     b.onclick = () => { state.range = n; buildControls(); render(); };
     r.appendChild(b);
   });
 }
 
-/* ─── формат ─── */
 const nf = new Intl.NumberFormat('ru-RU');
-function fmt(v, unit) {
+function fmt(v, unit){
   if (v === null || v === undefined || isNaN(v)) return '—';
   if (unit === '%') return v.toFixed(1).replace('.', ',') + '%';
   if (unit === '₽') return nf.format(Math.round(v)) + ' ₽';
   return nf.format(Math.round(v));
 }
-function fmtDelta(d, unit) {
+function fmtDelta(d, unit){
   if (d === null || d === undefined || isNaN(d)) return '—';
   const s = d > 0 ? '▲ +' : (d < 0 ? '▼ ' : '');
   if (unit === '%') return s + d.toFixed(1).replace('.', ',') + ' п.п.';
   if (unit === '₽') return s + nf.format(Math.round(d)) + ' ₽';
   return s + nf.format(Math.round(d));
 }
-function metric(key) { return state.data.metrics.find(m => m.key === key) || null; }
-function at(m, i) { return m && m.values[i] !== undefined ? m.values[i] : null; }
+function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function metric(key){ return (state.data.metrics || []).find(m => m.key === key) || null; }
+function at(m, i){ return m && m.values[i] !== undefined ? m.values[i] : null; }
 
-/* ─── отрисовка ─── */
-function render() {
-  const d = state.data;
+function render(){
   const i = state.week;
   let html = '';
 
   /* карточки ЗП */
   html += '<div class="frames">';
   SALARY.forEach(key => {
-    const m = metric(key);
-    if (!m) return;
+    const m = metric(key); if (!m) return;
     const now = at(m, i), prev = at(m, i - 1);
     const delta = (now !== null && prev !== null) ? now - prev : null;
     const plan = PLANS[key];
     let status = '';
-    if (plan !== null && plan !== undefined && now !== null) {
+    if (plan != null && now !== null) {
       status = now >= plan
         ? '<span class="status good">план выполнен</span>'
-        : '<span class="status bad">ниже плана на ' +
-          (m.unit === '%' ? (plan - now).toFixed(1).replace('.', ',') + ' п.п.' : fmt(plan - now, m.unit)) +
-          '</span>';
+        : '<span class="status bad">ниже плана на ' + (plan - now).toFixed(1).replace('.', ',') + ' п.п.</span>';
     }
     html += '<div class="frame">' +
       '<div class="bar"><b>' + esc(m.label) + '</b>' +
       (plan != null ? '<span class="plan">план ' + fmt(plan, m.unit) + '</span>' : '') + '</div>' +
       '<div class="body"><div class="big">' + fmt(now, m.unit) + '</div>' +
-      '<div class="side">' +
-      '<div class="delta' + (delta < 0 ? ' down' : '') + '">' + fmtDelta(delta, m.unit) + '</div>' +
-      '<div class="prev">неделей раньше ' + fmt(prev, m.unit) + '</div>' +
-      '</div></div>' +
-      '<div class="foot">' + status + spark(m, i) + '</div>' +
-      '</div>';
+      '<div class="side"><div class="delta' + (delta < 0 ? ' down' : '') + '">' + fmtDelta(delta, m.unit) + '</div>' +
+      '<div class="prev">неделей раньше ' + fmt(prev, m.unit) + '</div></div></div>' +
+      '<div class="foot">' + status + spark(m, i) + '</div></div>';
   });
   html += '</div>';
 
-  /* прочие показатели */
+  /* прочие недельные */
   html += '<div class="tiles">';
   OTHER.forEach(key => {
-    const m = metric(key);
-    if (!m) return;
+    const m = metric(key); if (!m) return;
     const now = at(m, i), prev = at(m, i - 1);
     const delta = (now !== null && prev !== null) ? now - prev : null;
     html += '<div class="tile"><div class="name">' + esc(m.label) + '</div>' +
@@ -392,24 +337,31 @@ function render() {
   }
   html += '</div>';
 
+  /* ежемесячные */
+  const mon = state.data.monthly || [];
+  if (mon.length) {
+    html += '<div class="panel"><h2>Ежемесячные показатели</h2>' +
+      '<div class="hint">Заполняются раз в месяц — показано последнее значение</div><div class="tiles m">';
+    mon.forEach(m => {
+      html += '<div class="tile"><div class="name">' + esc(m.label) + '</div>' +
+        '<div class="val">' + fmt(m.latest, m.unit) + '</div>' +
+        '<div class="row"><span class="per">' + esc(m.latestLabel || '') + '</span></div></div>';
+    });
+    html += '</div></div>';
+  }
+
   /* график */
   html += '<div class="panel"><div class="head"><h2>Показатели для зарплаты по неделям</h2>' +
-    '<div class="legend" id="legend"></div></div>' +
-    '<div class="chartbox" id="chartbox"></div></div>';
+    '<div class="legend" id="legend"></div></div><div class="chartbox" id="chartbox"></div></div>';
 
-  /* таблица по ТРЦ */
   html += venueTable(i);
+  html += cityTable(i);
 
   document.getElementById('content').innerHTML = html;
-  drawLegend();
-  drawChart();
-  bindSort();
+  drawLegend(); drawChart(); bindSort();
 }
 
-function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
-
-/* мини-график в карточке */
-function spark(m, i) {
+function spark(m, i){
   const from = Math.max(0, i - 7);
   const vals = m.values.slice(from, i + 1).filter(x => x !== null);
   if (vals.length < 2) return '<span></span>';
@@ -425,14 +377,11 @@ function spark(m, i) {
   return '<svg width="' + w + '" height="' + h + '" aria-hidden="true">' + bars + '</svg>';
 }
 
-/* переключатели линий */
-function drawLegend() {
-  const box = document.getElementById('legend');
-  if (!box) return;
+function drawLegend(){
+  const box = document.getElementById('legend'); if (!box) return;
   box.innerHTML = '';
   SALARY.forEach(key => {
-    const m = metric(key);
-    if (!m) return;
+    const m = metric(key); if (!m) return;
     const b = document.createElement('button');
     b.className = 'lg';
     b.setAttribute('aria-pressed', !!state.on[key]);
@@ -442,19 +391,15 @@ function drawLegend() {
   });
 }
 
-/* большой график */
-function drawChart() {
-  const box = document.getElementById('chartbox');
-  if (!box) return;
-  const d = state.data;
-  const to = state.week;
+function drawChart(){
+  const box = document.getElementById('chartbox'); if (!box) return;
+  const d = state.data, to = state.week;
   const from = Math.max(0, to - state.range + 1);
   const labels = d.weeks.slice(from, to + 1);
   const lines = SALARY.filter(k => state.on[k] && metric(k))
     .map(k => ({ key: k, m: metric(k), vals: metric(k).values.slice(from, to + 1) }));
 
   if (!lines.length) { box.innerHTML = '<div class="loading">Включи хотя бы один показатель</div>'; return; }
-
   const all = [].concat(...lines.map(l => l.vals)).filter(v => v !== null);
   if (!all.length) { box.innerHTML = '<div class="loading">За этот период нет данных</div>'; return; }
 
@@ -481,7 +426,7 @@ function drawChart() {
   });
   lines.forEach(l => {
     const pts = l.vals.map((v, k) => v === null ? null : [x(k), y(v)]).filter(Boolean);
-    if (pts.length < 1) return;
+    if (!pts.length) return;
     svg += '<polyline fill="none" stroke="' + COLORS[l.key] + '" stroke-width="2.5" ' +
       'stroke-linejoin="round" stroke-linecap="round" points="' +
       pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ') + '"></polyline>';
@@ -491,13 +436,10 @@ function drawChart() {
     });
   });
   svg += '<line id="guide" x1="0" y1="' + padT + '" x2="0" y2="' + (H - padB) +
-    '" stroke="rgba(25,25,25,.35)" stroke-width="1" opacity="0"></line>';
-  svg += '</svg><div class="tip" id="tip"></div>';
+    '" stroke="rgba(25,25,25,.35)" stroke-width="1" opacity="0"></line></svg><div class="tip" id="tip"></div>';
   box.innerHTML = svg;
 
-  const svgEl = box.querySelector('svg');
-  const tip = document.getElementById('tip');
-  const guide = document.getElementById('guide');
+  const svgEl = box.querySelector('svg'), tip = document.getElementById('tip'), guide = document.getElementById('guide');
   svgEl.addEventListener('mousemove', ev => {
     const r = svgEl.getBoundingClientRect();
     const rel = (ev.clientX - r.left) / r.width * W;
@@ -508,60 +450,95 @@ function drawChart() {
       '<div><span>' + esc(l.m.label) + '</span><span>' + fmt(l.vals[k], l.m.unit) + '</span></div>').join('');
     tip.style.opacity = 1;
     const px = x(k) / W * r.width;
-    tip.style.left = Math.min(Math.max(px - 60, 0), r.width - 190) + 'px';
+    tip.style.left = Math.min(Math.max(px - 60, 0), r.width - 210) + 'px';
     tip.style.top = '6px';
   });
   svgEl.addEventListener('mouseleave', () => { tip.style.opacity = 0; guide.setAttribute('opacity', '0'); });
 }
 
-/* таблица по ТРЦ */
-function cityOf(name) {
+/* ── таблица по ТРЦ ── */
+function cityOf(name){
   const low = name.toLowerCase();
-  for (const [city, keys] of Object.entries(CITIES)) {
-    if (keys.some(k => low.includes(k))) return city;
-  }
+  for (const [city, keys] of Object.entries(CITIES)) if (keys.some(k => low.includes(k))) return city;
   return '—';
 }
-
 let sortBy = 'guests', sortDir = -1;
 
-function venueTable(i) {
+function vv(v, key, i){
+  const b = v.data[key];
+  if (!b) return null;
+  if (b.latest !== null && b.latest !== undefined) return b.latest;
+  return b.values[i] !== undefined ? b.values[i] : null;
+}
+
+function venueTable(i){
   let rows = (state.data.venues || []).map(v => ({
     name: v.name,
     city: cityOf(v.name),
-    guests: v.guests[i] !== undefined ? v.guests[i] : null,
-    revenue: v.revenue && v.revenue[i] !== undefined ? v.revenue[i] : null
+    guests: vv(v, 'guests', i),
+    revenue: vv(v, 'revenue', i),
+    ret: vv(v, 'ret', i),
+    cards: vv(v, 'cards', i),
+    basePrime: vv(v, 'basePrime', i),
+    booking: vv(v, 'booking', i)
   }));
   if (state.city !== 'Все города') rows = rows.filter(r => r.city === state.city);
   rows.forEach(r => { r.avg = (r.revenue !== null && r.guests) ? r.revenue / r.guests : null; });
 
   const totalG = rows.reduce((s, r) => s + (r.guests || 0), 0);
   const totalR = rows.reduce((s, r) => s + (r.revenue || 0), 0);
+  const totalC = rows.reduce((s, r) => s + (r.cards || 0), 0);
+  const totalB = rows.reduce((s, r) => s + (r.basePrime || 0), 0);
+  const totalK = rows.reduce((s, r) => s + (r.booking || 0), 0);
   rows.forEach(r => { r.share = totalG ? (r.guests || 0) / totalG : 0; });
   rows.sort((a, b) => sortBy === 'name'
     ? a.name.localeCompare(b.name, 'ru') * sortDir
     : ((a[sortBy] ?? -1) - (b[sortBy] ?? -1)) * sortDir);
 
-  if (!rows.length) return '<div class="panel"><h2>По ТРЦ</h2><div class="loading">Нет данных за эту неделю</div></div>';
+  if (!rows.length) return '<div class="panel"><h2>По ТРЦ</h2><div class="loading">Нет данных</div></div>';
 
-  const th = (key, label) => '<th data-key="' + key + '" aria-sort="' +
+  const th = (key, label, cls) => '<th data-key="' + key + '" class="' + (cls || '') + '" aria-sort="' +
     (sortBy === key ? (sortDir < 0 ? 'descending' : 'ascending') : 'none') + '">' + label + '</th>';
 
   return '<div class="panel"><h2>По ТРЦ · неделя ' + esc(state.data.weeks[i]) + '</h2>' +
-    '<table><thead><tr>' + th('name', 'ТРЦ') + th('guests', 'Гости с картой') +
-    th('revenue', 'Выручка карты') + th('avg', 'Средний чек') + th('share', 'Доля гостей') +
+    '<div class="hint">Две последние колонки заполняются раз в месяц</div><div class="scroll"><table><thead><tr>' +
+    th('name','ТРЦ') + th('guests','Гости с картой') + th('revenue','Выручка карты') +
+    th('avg','Средний чек') + th('ret','Возврат %') + th('cards','Выдано карт') +
+    th('basePrime','База Primehill','mcol') + th('booking','Бронирование','mcol') + th('share','Доля гостей') +
     '</tr></thead><tbody>' +
     rows.map(r => '<tr><td>' + esc(r.name) + '<span class="tcity">' + esc(r.city) + '</span></td>' +
-      '<td>' + fmt(r.guests, '') + '</td>' +
-      '<td>' + fmt(r.revenue, '₽') + '</td>' +
-      '<td>' + fmt(r.avg, '₽') + '</td>' +
+      '<td>' + fmt(r.guests, '') + '</td><td>' + fmt(r.revenue, '₽') + '</td>' +
+      '<td>' + fmt(r.avg, '₽') + '</td><td>' + fmt(r.ret, '%') + '</td>' +
+      '<td>' + fmt(r.cards, '') + '</td>' +
+      '<td class="mcol">' + fmt(r.basePrime, '') + '</td><td class="mcol">' + fmt(r.booking, '') + '</td>' +
       '<td>' + (r.share * 100).toFixed(1).replace('.', ',') + '%' +
       '<i class="share" style="width:' + Math.max(2, r.share * 100).toFixed(1) + '%"></i></td></tr>').join('') +
     '</tbody><tfoot><tr><td>Итого</td><td>' + fmt(totalG, '') + '</td><td>' + fmt(totalR, '₽') +
-    '</td><td>' + fmt(totalG ? totalR / totalG : null, '₽') + '</td><td></td></tr></tfoot></table></div>';
+    '</td><td>' + fmt(totalG ? totalR / totalG : null, '₽') + '</td><td></td><td>' + fmt(totalC, '') +
+    '</td><td class="mcol">' + fmt(totalB, '') + '</td><td class="mcol">' + fmt(totalK, '') +
+    '</td><td></td></tr></tfoot></table></div></div>';
 }
 
-function bindSort() {
+/* ── Email по городам ── */
+function cityTable(i){
+  let rows = (state.data.cities || []).map(c => ({
+    name: c.name,
+    now: c.values[i] !== undefined ? c.values[i] : null,
+    prev: c.values[i - 1] !== undefined ? c.values[i - 1] : null
+  }));
+  if (state.city !== 'Все города') rows = rows.filter(r => r.name.toLowerCase().includes(state.city.toLowerCase().slice(0, 6)));
+  if (!rows.length) return '';
+  return '<div class="panel"><h2>Email, % открытия по городам</h2><div class="scroll"><table><thead><tr>' +
+    '<th>Город</th><th>Неделя</th><th>Прошлая</th><th>Δ</th></tr></thead><tbody>' +
+    rows.map(r => {
+      const d = (r.now !== null && r.prev !== null) ? r.now - r.prev : null;
+      return '<tr><td>' + esc(r.name) + '</td><td>' + fmt(r.now, '%') + '</td>' +
+        '<td>' + fmt(r.prev, '%') + '</td><td class="delta' + (d < 0 ? ' down' : '') + '">' +
+        fmtDelta(d, '%') + '</td></tr>';
+    }).join('') + '</tbody></table></div></div>';
+}
+
+function bindSort(){
   document.querySelectorAll('th[data-key]').forEach(th => {
     th.onclick = () => {
       const k = th.dataset.key;
@@ -571,36 +548,49 @@ function bindSort() {
   });
 }
 
-/* демо-данные, пока не подключён API */
-function demoData() {
+/* демо-данные, если API не отвечает */
+function demoData(){
   const weeks = [], n = 26;
   for (let i = n - 1; i >= 0; i--) {
     const d = new Date(); d.setDate(d.getDate() - i * 7);
-    weeks.push(('0' + d.getDate()).slice(-2) + '.' + ('0' + (d.getMonth() + 1)).slice(-2));
+    weeks.push(('0'+d.getDate()).slice(-2) + '.' + ('0'+(d.getMonth()+1)).slice(-2));
   }
   const wave = (base, amp, drift) => weeks.map((_, i) =>
-    Math.max(0, base + Math.sin(i / 2.2) * amp + i * drift + (i % 3) * amp * .18));
-  const venueNames = ['Сити Молл', 'Остров', 'Колумб', 'Югра', 'Аура', 'Петровский',
-                      'Матрица', 'Летаут', 'Гудок', 'Июнь', 'СБС', 'Кит'];
+    Math.max(0, base + Math.sin(i/2.2)*amp + i*drift + (i%3)*amp*.18));
+  const names = ['Сити Молл','Остров','Колумб','Югра','Аура','Петровский','Матрица','Летаут','Гудок','Июнь','СБС','Кит'];
+  const cityNames = ['Тюмень','Нижневартовск','Сургут','Ижевск','Самара','Москва','Санкт-Петербург'];
   return {
-    ok: true, updated: new Date().toISOString(), weeks: weeks,
-    metrics: [
-      { key: 'ret1', label: 'Возврат гостей по карте гостя', unit: '%', values: wave(34, 3, .08) },
-      { key: 'ret2', label: 'Возврат гостей из базы', unit: '%', values: wave(13, 1.6, .02) },
-      { key: 'email', label: 'Email, открытия', unit: '%', values: wave(23, 3.4, .05) },
-      { key: 'guests', label: 'Гости с картой', unit: '', values: wave(4300, 420, 14) },
-      { key: 'rev', label: 'Выручка карты', unit: '₽', values: wave(6200000, 700000, 18000) },
-      { key: 'cards', label: 'Выдано бонусных карт', unit: '', values: wave(300, 55, .6) }
+    ok:true, updated:new Date().toISOString(), weeks,
+    metrics:[
+      {key:'ret',   label:'Возврат гостей по карте гостя', unit:'%', values:wave(34,3,.08)},
+      {key:'email', label:'Email, % открытия',             unit:'%', values:wave(10,2.4,.05)},
+      {key:'guests',label:'Гости с картой Primehill',      unit:'',  values:wave(4300,420,14)},
+      {key:'rev',   label:'Выручка карты',                 unit:'₽', values:wave(25000000,2000000,60000)},
+      {key:'cards', label:'Выдано бонусных карт',          unit:'',  values:wave(300,55,.6)}
     ],
-    venues: venueNames.map((nm, k) => ({
-      name: nm,
-      guests: wave(180 + k * 34, 40, 1),
-      revenue: wave(260000 + k * 52000, 60000, 1400)
-    }))
+    monthly:[
+      {key:'baseNet',  label:'База Сети (вайкдайнс + прайм)', unit:'',  latest:548061, latestLabel:'АВГУСТ', values:[]},
+      {key:'basePrime',label:'Гостей в базе Primehill',       unit:'',  latest:223451, latestLabel:'АВГУСТ', values:[]},
+      {key:'booking',  label:'Бронирование, база сеть',       unit:'',  latest:324610, latestLabel:'АВГУСТ', values:[]},
+      {key:'revPlan',  label:'Выручка по сети, план',         unit:'₽', latest:99200000, latestLabel:'АВГУСТ', values:[]},
+      {key:'revFact',  label:'Выручка по сети, факт',         unit:'₽', latest:99484724, latestLabel:'АВГУСТ', values:[]},
+      {key:'planDone', label:'Выполнение плана по сети',      unit:'%', latest:100.29, latestLabel:'АВГУСТ', values:[]}
+    ],
+    venues: names.map((nm,k) => ({
+      name:nm,
+      data:{
+        ret:      {values:wave(30+k,4,.05), latest:null},
+        guests:   {values:wave(180+k*34,40,1), latest:null},
+        revenue:  {values:wave(1000000+k*180000,200000,4000), latest:null},
+        cards:    {values:wave(20+k*3,8,.1), latest:null},
+        basePrime:{values:[], latest:19723-k*900},
+        booking:  {values:[], latest:71232-k*4200}
+      }
+    })),
+    cities: cityNames.map((nm,k) => ({name:nm, key:'emailOpen', values:wave(9+k*.4,2,.03)}))
   };
 }
 
-/* старт */
 if (savedKey() || !API_URL) start(); else openGate();
 </script>
 </body>
