@@ -64,7 +64,7 @@ select{font-family:inherit;font-size:14px;padding:8px 12px;border:1px solid var(
 .status.bad{background:var(--red);border-color:var(--red);color:var(--white)}
 .status.good{background:var(--ink);border-color:var(--ink);color:var(--white)}
 
-.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:26px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:26px}
 .tiles.m{grid-template-columns:repeat(3,1fr)}
 .tile{background:var(--white);border-radius:16px;padding:15px 16px}
 .tile .name{font-size:13px;color:var(--mute);margin-bottom:8px}
@@ -152,6 +152,10 @@ tfoot td{font-weight:500;border-top:2px solid var(--ink);border-bottom:none}
       <select id="city"></select>
     </div>
     <div class="field">
+      <label>Детализация</label>
+      <div class="chips" id="grans"></div>
+    </div>
+    <div class="field">
       <label>Период на графике</label>
       <div class="chips" id="ranges"></div>
     </div>
@@ -187,10 +191,23 @@ const CITIES = {
 /* ═════════ Дальше менять не нужно ═════════ */
 
 const SALARY = ['ret', 'email'];
-const OTHER  = ['guests', 'rev', 'cards'];
+const OTHER  = ['guests', 'guestsAll', 'rev', 'cards'];
 const COLORS = { ret: '#FF2026', email: '#191919' };
 
-const state = { data: null, week: 0, range: 12, city: 'Все города', on: { ret: 1, email: 1 } };
+const state = { data: null, week: 0, range: 12, city: 'Все города', gran: 'week', on: { ret: 1, email: 1 } };
+
+/* индексы колонок выбранной детализации */
+function seq(){
+  const k = state.data.kinds || [];
+  const out = [];
+  for (let i = 0; i < state.data.weeks.length; i++) if ((k[i] || 'week') === state.gran) out.push(i);
+  return out.length ? out : state.data.weeks.map((_, i) => i);
+}
+function prevOf(i){
+  const q = seq(), p = q.indexOf(i);
+  return p > 0 ? q[p - 1] : -1;
+}
+function granWord(){ return state.gran === 'month' ? 'месяц' : 'неделя'; }
 
 const gate = document.getElementById('gate');
 const app  = document.getElementById('app');
@@ -231,21 +248,34 @@ async function start(){
 
 function afterLoad(stamp){
   document.getElementById('updated').textContent = 'обновлено ' + stamp;
-  state.week = state.data.weeks.length - 1;
+  state.week = seq().slice(-1)[0];
   buildControls(); render();
 }
 document.getElementById('reload').addEventListener('click', start);
 
 function buildControls(){
+  const q = seq();
   const w = document.getElementById('week');
   w.innerHTML = '';
-  state.data.weeks.forEach((label, i) => {
+  q.forEach((idx, n) => {
     const o = document.createElement('option');
-    o.value = i;
-    o.textContent = label + (i === state.data.weeks.length - 1 ? ' · последняя' : '');
+    o.value = idx;
+    o.textContent = state.data.weeks[idx] + (n === q.length - 1 ? ' · последний' : '');
     w.appendChild(o);
   });
+  if (q.indexOf(state.week) === -1) state.week = q[q.length - 1];
   w.value = state.week;
+  document.querySelector('label[for="week"]').textContent = state.gran === 'month' ? 'Месяц' : 'Неделя';
+
+  const gr = document.getElementById('grans');
+  gr.innerHTML = '';
+  [['week','Недели'], ['month','Месяцы']].forEach(([k, label]) => {
+    const b = document.createElement('button');
+    b.className = 'chip'; b.textContent = label;
+    b.setAttribute('aria-pressed', k === state.gran);
+    b.onclick = () => { state.gran = k; state.week = seq().slice(-1)[0]; buildControls(); render(); };
+    gr.appendChild(b);
+  });
   w.onchange = () => { state.week = +w.value; render(); };
 
   const c = document.getElementById('city');
@@ -261,7 +291,7 @@ function buildControls(){
   r.innerHTML = '';
   [4, 8, 12, 26].forEach(n => {
     const b = document.createElement('button');
-    b.className = 'chip'; b.textContent = n + ' нед.';
+    b.className = 'chip'; b.textContent = n + (state.gran === 'month' ? ' мес.' : ' нед.');
     b.setAttribute('aria-pressed', n === state.range);
     b.onclick = () => { state.range = n; buildControls(); render(); };
     r.appendChild(b);
@@ -319,6 +349,7 @@ function viewMetrics(){
     { key:'ret',    label: src('ret').label   || 'Возврат гостей',        unit:'%', values: ret },
     { key:'email',  label: src('email').label || 'Email % открытия',      unit:'%', values: cityRow ? cityRow.values : Array(n).fill(null) },
     { key:'guests', label: src('guests').label|| 'Гости с картой',        unit:'',  values: sumOf('guests') },
+    { key:'guestsAll', label: src('guestsAll').label || 'Гости всего',     unit:'',  values: sumOf('guestsAll') },
     { key:'rev',    label: src('rev').label   || 'Выручка карты',         unit:'₽', values: sumOf('revenue') },
     { key:'cards',  label: src('cards').label || 'Выдано бонусных карт',  unit:'',  values: sumOf('cards') }
   ];
@@ -363,7 +394,7 @@ function render(){
   html += '<div class="frames">';
   SALARY.forEach(key => {
     const m = metric(key); if (!m) return;
-    const now = at(m, i), prev = at(m, i - 1);
+    const now = at(m, i), prev = at(m, prevOf(i));
     const delta = (now !== null && prev !== null) ? now - prev : null;
     const plan = PLANS[key];
     let status = '';
@@ -377,7 +408,7 @@ function render(){
       (plan != null ? '<span class="plan">план ' + fmt(plan, m.unit) + '</span>' : '') + '</div>' +
       '<div class="body"><div class="big">' + fmt(now, m.unit) + '</div>' +
       '<div class="side"><div class="delta' + (delta < 0 ? ' down' : '') + '">' + fmtDelta(delta, m.unit) + '</div>' +
-      '<div class="prev">неделей раньше ' + fmt(prev, m.unit) + '</div></div></div>' +
+      '<div class="prev">' + (state.gran === 'month' ? 'месяцем' : 'неделей') + ' раньше ' + fmt(prev, m.unit) + '</div></div></div>' +
       '<div class="foot">' + status + spark(m, i) + '</div></div>';
   });
   html += '</div>';
@@ -386,21 +417,21 @@ function render(){
   html += '<div class="tiles">';
   OTHER.forEach(key => {
     const m = metric(key); if (!m) return;
-    const now = at(m, i), prev = at(m, i - 1);
+    const now = at(m, i), prev = at(m, prevOf(i));
     const delta = (now !== null && prev !== null) ? now - prev : null;
     html += '<div class="tile"><div class="name">' + esc(m.label) + '</div>' +
       '<div class="val">' + fmt(now, m.unit) + '</div>' +
       '<div class="row"><span class="delta' + (delta < 0 ? ' down' : '') + '">' +
       fmtDelta(delta, m.unit) + '</span>' + spark(m, i) + '</div></div>';
   });
-  const g = metric('guests'), rv = metric('rev');
+  const g = metric('guestsAll'), rv = metric('rev');
   if (g && rv) {
     const a = at(rv, i), b = at(g, i);
     const avg = (a !== null && b) ? a / b : null;
-    const ap = at(rv, i - 1), bp = at(g, i - 1);
+    const ap = at(rv, prevOf(i)), bp = at(g, prevOf(i));
     const avgPrev = (ap !== null && bp) ? ap / bp : null;
     const dl = (avg !== null && avgPrev !== null) ? avg - avgPrev : null;
-    html += '<div class="tile"><div class="name">Средний чек по карте</div>' +
+    html += '<div class="tile"><div class="name">Средний чек на гостя</div>' +
       '<div class="val">' + fmt(avg, '₽') + '</div>' +
       '<div class="row"><span class="delta' + (dl < 0 ? ' down' : '') + '">' + fmtDelta(dl, '₽') + '</span></div></div>';
   }
@@ -420,7 +451,7 @@ function render(){
   }
 
   /* график */
-  html += '<div class="panel"><div class="head"><h2>Показатели для зарплаты по неделям</h2>' +
+  html += '<div class="panel"><div class="head"><h2>Показатели для зарплаты по ' + (state.gran === 'month' ? 'месяцам' : 'неделям') + '</h2>' +
     '<div class="legend" id="legend"></div></div><div class="chartbox" id="chartbox"></div></div>';
 
   html += venueTable(i);
@@ -431,8 +462,8 @@ function render(){
 }
 
 function spark(m, i){
-  const from = Math.max(0, i - 7);
-  const vals = m.values.slice(from, i + 1).filter(x => x !== null);
+  const q = seq(), p = q.indexOf(i);
+  const vals = q.slice(Math.max(0, p - 7), p + 1).map(k => m.values[k]).filter(x => x !== null && x !== undefined);
   if (vals.length < 2) return '<span></span>';
   const min = Math.min(...vals), max = Math.max(...vals), rng = (max - min) || 1;
   const w = 86, h = 26, step = w / (vals.length - 1);
@@ -462,11 +493,11 @@ function drawLegend(){
 
 function drawChart(){
   const box = document.getElementById('chartbox'); if (!box) return;
-  const d = state.data, to = state.week;
-  const from = Math.max(0, to - state.range + 1);
-  const labels = d.weeks.slice(from, to + 1);
+  const d = state.data, q = seq(), p = q.indexOf(state.week);
+  const idxs = q.slice(Math.max(0, p - state.range + 1), p + 1);
+  const labels = idxs.map(k => d.weeks[k]);
   const lines = SALARY.filter(k => state.on[k] && metric(k))
-    .map(k => ({ key: k, m: metric(k), vals: metric(k).values.slice(from, to + 1) }));
+    .map(k => ({ key: k, m: metric(k), vals: idxs.map(x => metric(k).values[x] ?? null) }));
 
   if (!lines.length) { box.innerHTML = '<div class="loading">Включи хотя бы один показатель</div>'; return; }
   const all = [].concat(...lines.map(l => l.vals)).filter(v => v !== null);
@@ -545,6 +576,7 @@ function venueTable(i){
     name: v.name,
     city: cityOf(v.name),
     guests: vv(v, 'guests', i),
+    guestsAll: vv(v, 'guestsAll', i),
     revenue: vv(v, 'revenue', i),
     ret: vv(v, 'ret', i),
     cards: vv(v, 'cards', i),
@@ -552,9 +584,10 @@ function venueTable(i){
     booking: vv(v, 'booking', i)
   }));
   if (state.city !== 'Все города') rows = rows.filter(r => r.city === state.city);
-  rows.forEach(r => { r.avg = (r.revenue !== null && r.guests) ? r.revenue / r.guests : null; });
+  rows.forEach(r => { r.avg = (r.revenue !== null && r.guestsAll) ? r.revenue / r.guestsAll : null; });
 
   const totalG = rows.reduce((s, r) => s + (r.guests || 0), 0);
+  const totalGA = rows.reduce((s, r) => s + (r.guestsAll || 0), 0);
   const totalR = rows.reduce((s, r) => s + (r.revenue || 0), 0);
   const totalC = rows.reduce((s, r) => s + (r.cards || 0), 0);
   const totalB = rows.reduce((s, r) => s + (r.basePrime || 0), 0);
@@ -569,21 +602,23 @@ function venueTable(i){
   const th = (key, label, cls) => '<th data-key="' + key + '" class="' + (cls || '') + '" aria-sort="' +
     (sortBy === key ? (sortDir < 0 ? 'descending' : 'ascending') : 'none') + '">' + label + '</th>';
 
-  return '<div class="panel"><h2>По ТРЦ · неделя ' + esc(state.data.weeks[i]) + '</h2>' +
+  return '<div class="panel"><h2>По ТРЦ · ' + granWord() + ' ' + esc(state.data.weeks[i]) + '</h2>' +
     '<div class="hint">Две последние колонки заполняются раз в месяц</div><div class="scroll"><table><thead><tr>' +
-    th('name','ТРЦ') + th('guests','Гости с картой') + th('revenue','Выручка карты') +
-    th('avg','Средний чек') + th('ret','Возврат %') + th('cards','Выдано карт') +
+    th('name','ТРЦ') + th('guests','Гости с картой') + th('guestsAll','Гости всего') +
+    th('revenue','Выручка карты') + th('avg','Средний чек') + th('ret','Возврат %') + th('cards','Выдано карт') +
     th('basePrime','База Primehill','mcol') + th('booking','Бронирование','mcol') + th('share','Доля гостей') +
     '</tr></thead><tbody>' +
     rows.map(r => '<tr><td>' + esc(r.name) + '<span class="tcity">' + esc(r.city) + '</span></td>' +
-      '<td>' + fmt(r.guests, '') + '</td><td>' + fmt(r.revenue, '₽') + '</td>' +
+      '<td>' + fmt(r.guests, '') + '</td><td>' + fmt(r.guestsAll, '') + '</td>' +
+      '<td>' + fmt(r.revenue, '₽') + '</td>' +
       '<td>' + fmt(r.avg, '₽') + '</td><td>' + fmt(r.ret, '%') + '</td>' +
       '<td>' + fmt(r.cards, '') + '</td>' +
       '<td class="mcol">' + fmt(r.basePrime, '') + '</td><td class="mcol">' + fmt(r.booking, '') + '</td>' +
       '<td>' + (r.share * 100).toFixed(1).replace('.', ',') + '%' +
       '<i class="share" style="width:' + Math.max(2, r.share * 100).toFixed(1) + '%"></i></td></tr>').join('') +
-    '</tbody><tfoot><tr><td>Итого</td><td>' + fmt(totalG, '') + '</td><td>' + fmt(totalR, '₽') +
-    '</td><td>' + fmt(totalG ? totalR / totalG : null, '₽') + '</td><td></td><td>' + fmt(totalC, '') +
+    '</tbody><tfoot><tr><td>Итого</td><td>' + fmt(totalG, '') + '</td><td>' + fmt(totalGA, '') +
+    '</td><td>' + fmt(totalR, '₽') +
+    '</td><td>' + fmt(totalGA ? totalR / totalGA : null, '₽') + '</td><td></td><td>' + fmt(totalC, '') +
     '</td><td class="mcol">' + fmt(totalB, '') + '</td><td class="mcol">' + fmt(totalK, '') +
     '</td><td></td></tr></tfoot></table></div></div>';
 }
@@ -604,10 +639,10 @@ function channelTable(i){
   const cell = (ch, r) => {
     const vals = r.net ? ch.net : (ch.rows.find(x => x.name === r.name) || {}).values;
     if (!vals) return { now: null, prev: null };
-    return { now: vals[i] ?? null, prev: vals[i - 1] ?? null };
+    return { now: vals[i] ?? null, prev: vals[prevOf(i)] ?? null };
   };
 
-  return '<div class="panel"><h2>Рассылки · неделя ' + esc(state.data.weeks[i]) + '</h2>' +
+  return '<div class="panel"><h2>Рассылки · ' + granWord() + ' ' + esc(state.data.weeks[i]) + '</h2>' +
     '<div class="hint">Процент открытий у Email, прочтений у ВК, конверсии у Телеграма</div><div class="scroll"><table><thead><tr>' +
     '<th>Канал</th>' + chs.map(ch => '<th>' + esc(ch.label) + '</th>').join('') +
     '</tr></thead><tbody>' +
@@ -645,10 +680,12 @@ function demoData(){
   const cityNames = ['Тюмень','Нижневартовск','Сургут','Ижевск','Самара','Москва','Санкт-Петербург'];
   return {
     ok:true, updated:new Date().toISOString(), weeks,
+    kinds: weeks.map((_,i) => (i % 5 === 4 ? 'month' : 'week')),
     metrics:[
       {key:'ret',   label:'Возврат гостей по карте гостя', unit:'%', values:wave(34,3,.08)},
       {key:'email', label:'Email, % открытия',             unit:'%', values:wave(10,2.4,.05)},
       {key:'guests',label:'Гости с картой Primehill',      unit:'',  values:wave(4300,420,14)},
+      {key:'guestsAll',label:'Гости всего',                unit:'',  values:wave(13900,1200,40)},
       {key:'rev',   label:'Выручка карты',                 unit:'₽', values:wave(25000000,2000000,60000)},
       {key:'cards', label:'Выдано бонусных карт',          unit:'',  values:wave(300,55,.6)}
     ],
@@ -665,6 +702,7 @@ function demoData(){
       data:{
         ret:      {values:wave(30+k,4,.05), latest:null},
         guests:   {values:wave(180+k*34,40,1), latest:null},
+        guestsAll:{values:wave(600+k*110,120,3), latest:null},
         revenue:  {values:wave(1000000+k*180000,200000,4000), latest:null},
         cards:    {values:wave(20+k*3,8,.1), latest:null},
         basePrime:{values:[], latest:19723-k*900},
