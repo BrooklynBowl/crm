@@ -31,6 +31,8 @@ button{font-family:inherit;font-size:inherit;cursor:pointer}
 .top h1{font-family:Oswald,sans-serif;font-weight:500;font-size:26px;letter-spacing:.02em;margin:0;line-height:1}
 .top .sub{color:var(--mute);font-size:13px;margin-top:2px}
 .top .right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.tabs{margin-left:24px}
+.tabs .chip{background:var(--white);padding:9px 18px;font-size:14px}
 .btn{background:var(--white);border:1px solid var(--line);border-radius:800px;padding:8px 16px;color:var(--ink)}
 .btn:hover{border-color:var(--ink)}
 .btn-red{background:var(--red);border-color:var(--red);color:var(--white)}
@@ -139,6 +141,7 @@ tfoot td{font-weight:500;border-top:2px solid var(--ink);border-bottom:none}
       <h1>Дашборд CRM</h1>
       <div class="sub" id="updated">загружаем…</div>
     </div>
+    <div class="tabs chips" id="tabs"></div>
     <div class="right"><button class="btn" id="reload">Обновить</button></div>
   </div>
 
@@ -175,7 +178,7 @@ tfoot td{font-weight:500;border-top:2px solid var(--ink);border-bottom:none}
 const API_URL = 'https://script.google.com/macros/s/AKfycbxGxbZoiXls5OY57E5_qIpwlvlkEMEUgVipSYZcCrooH8Mpqc_ft9iB2__OGQinX3jr/exec';
 
 // Планы по зарплатным показателям, в процентах. null — плана нет.
-const PLANS = { ret: 35, email: 10 };
+const PLANS = { ret: 35, email: 10, conv: 12 };   // conv — конверсия сайта в онлайн бронь
 
 // Какие ТРЦ к какому городу относятся (по куску названия, маленькими буквами)
 const CITIES = {
@@ -191,17 +194,26 @@ const CITIES = {
 /* ═════════ Дальше менять не нужно ═════════ */
 
 const SALARY = ['ret', 'email'];
+const SALARY_SITE = ['conv', 'conv2'];
+const SITE_OTHER  = ['visitors', 'widget', 'booking', 'newUsers', 'oldUsers', 'time', 'seo', 'seoPct', 'bounce', 'leads'];
 const OTHER  = ['guests', 'guestsAll', 'rev', 'cards'];
-const COLORS = { ret: '#FF2026', email: '#191919' };
+const COLORS = { ret: '#FF2026', email: '#191919', conv: '#FF2026', conv2: '#191919' };
 
-const state = { data: null, week: 0, range: 12, city: 'Все города', gran: 'week', on: { ret: 1, email: 1 } };
+const state = { data: null, week: 0, range: 12, city: 'Все города', gran: 'week', tab: 'crm', on: { ret: 1, email: 1, conv: 1, conv2: 1 } };
+
+/* набор периодов текущей вкладки */
+function ds(){
+  if (state.tab === 'site' && state.data.site) return state.data.site;
+  return state.data;
+}
+function salaryKeys(){ return state.tab === 'site' ? SALARY_SITE : SALARY; }
 
 /* индексы колонок выбранной детализации */
 function seq(){
-  const k = state.data.kinds || [];
+  const src = ds(), k = src.kinds || [];
   const out = [];
-  for (let i = 0; i < state.data.weeks.length; i++) if ((k[i] || 'week') === state.gran) out.push(i);
-  return out.length ? out : state.data.weeks.map((_, i) => i);
+  for (let i = 0; i < src.weeks.length; i++) if ((k[i] || 'week') === state.gran) out.push(i);
+  return out.length ? out : src.weeks.map((_, i) => i);
 }
 function prevOf(i){
   const q = seq(), p = q.indexOf(i);
@@ -260,12 +272,24 @@ function buildControls(){
   q.forEach((idx, n) => {
     const o = document.createElement('option');
     o.value = idx;
-    o.textContent = state.data.weeks[idx] + (n === q.length - 1 ? ' · последний' : '');
+    o.textContent = ds().weeks[idx] + (n === q.length - 1 ? ' · последний' : '');
     w.appendChild(o);
   });
   if (q.indexOf(state.week) === -1) state.week = q[q.length - 1];
   w.value = state.week;
   document.querySelector('label[for="week"]').textContent = state.gran === 'month' ? 'Месяц' : 'Неделя';
+
+  const tb = document.getElementById('tabs');
+  tb.innerHTML = '';
+  [['crm','CRM'], ['site','Сайт']].forEach(([k, label]) => {
+    if (k === 'site' && !state.data.site) return;
+    const b = document.createElement('button');
+    b.className = 'chip'; b.textContent = label;
+    b.setAttribute('aria-pressed', k === state.tab);
+    b.onclick = () => { state.tab = k; state.week = seq().slice(-1)[0]; buildControls(); render(); };
+    tb.appendChild(b);
+  });
+  document.getElementById('city').parentNode.style.display = state.tab === 'site' ? 'none' : '';
 
   const gr = document.getElementById('grans');
   gr.innerHTML = '';
@@ -301,6 +325,8 @@ function buildControls(){
 const nf = new Intl.NumberFormat('ru-RU');
 function fmt(v, unit){
   if (v === null || v === undefined || isNaN(v)) return '—';
+  if (unit === 'time') { const m = Math.floor(v / 60), sec = Math.round(v % 60);
+    return m + ':' + (sec < 10 ? '0' : '') + sec; }
   if (unit === '%') return v.toFixed(1).replace('.', ',') + '%';
   if (unit === '₽') return nf.format(Math.round(v)) + ' ₽';
   return nf.format(Math.round(v));
@@ -308,6 +334,7 @@ function fmt(v, unit){
 function fmtDelta(d, unit){
   if (d === null || d === undefined || isNaN(d)) return '—';
   const s = d > 0 ? '▲ +' : (d < 0 ? '▼ ' : '');
+  if (unit === 'time') return s + Math.round(Math.abs(d)) + ' сек';
   if (unit === '%') return s + d.toFixed(1).replace('.', ',') + ' п.п.';
   if (unit === '₽') return s + nf.format(Math.round(d)) + ' ₽';
   return s + nf.format(Math.round(d));
@@ -324,6 +351,7 @@ function venuesOfCity(){
 
 /* показатели пересчитываются под выбранный город */
 function viewMetrics(){
+  if (state.tab === 'site') return (state.data.site && state.data.site.metrics) || [];
   if (state.city === 'Все города') return state.data.metrics || [];
   const vs = venuesOfCity(), n = state.data.weeks.length;
   const src = k => (state.data.metrics || []).find(m => m.key === k) || {};
@@ -385,14 +413,14 @@ function render(){
   const i = state.week;
   state.view = viewMetrics();
   let html = '';
-  if (state.city !== 'Все города') {
+  if (state.tab === 'crm' && state.city !== 'Все города') {
     html += '<div class="hint" style="margin:-8px 0 14px">Всё ниже пересчитано по ТРЦ города «' +
       esc(state.city) + '». Возврат % — средневзвешенный по гостям.</div>';
   }
 
   /* карточки ЗП */
   html += '<div class="frames">';
-  SALARY.forEach(key => {
+  salaryKeys().forEach(key => {
     const m = metric(key); if (!m) return;
     const now = at(m, i), prev = at(m, prevOf(i));
     const delta = (now !== null && prev !== null) ? now - prev : null;
@@ -415,7 +443,7 @@ function render(){
 
   /* прочие недельные */
   html += '<div class="tiles">';
-  OTHER.forEach(key => {
+  (state.tab === 'site' ? SITE_OTHER : OTHER).forEach(key => {
     const m = metric(key); if (!m) return;
     const now = at(m, i), prev = at(m, prevOf(i));
     const delta = (now !== null && prev !== null) ? now - prev : null;
@@ -425,7 +453,7 @@ function render(){
       fmtDelta(delta, m.unit) + '</span>' + spark(m, i) + '</div></div>';
   });
   const g = metric('guestsAll'), rv = metric('rev');
-  if (g && rv) {
+  if (state.tab === 'crm' && g && rv) {
     const a = at(rv, i), b = at(g, i);
     const avg = (a !== null && b) ? a / b : null;
     const ap = at(rv, prevOf(i)), bp = at(g, prevOf(i));
@@ -439,7 +467,7 @@ function render(){
 
   /* ежемесячные */
   const mon = viewMonthly();
-  if (mon.length) {
+  if (state.tab === 'crm' && mon.length) {
     html += '<div class="panel"><h2>Ежемесячные показатели</h2>' +
       '<div class="hint">Заполняются раз в месяц — показано последнее значение</div><div class="tiles m">';
     mon.forEach(m => {
@@ -451,11 +479,10 @@ function render(){
   }
 
   /* график */
-  html += '<div class="panel"><div class="head"><h2>Показатели для зарплаты по ' + (state.gran === 'month' ? 'месяцам' : 'неделям') + '</h2>' +
+  html += '<div class="panel"><div class="head"><h2>' + (state.tab === 'site' ? 'Конверсия сайта' : 'Показатели для зарплаты') + ' по ' + (state.gran === 'month' ? 'месяцам' : 'неделям') + '</h2>' +
     '<div class="legend" id="legend"></div></div><div class="chartbox" id="chartbox"></div></div>';
 
-  html += venueTable(i);
-  html += channelTable(i);
+  if (state.tab === 'crm') { html += venueTable(i); html += channelTable(i); }
 
   document.getElementById('content').innerHTML = html;
   drawLegend(); drawChart(); bindSort();
@@ -480,7 +507,7 @@ function spark(m, i){
 function drawLegend(){
   const box = document.getElementById('legend'); if (!box) return;
   box.innerHTML = '';
-  SALARY.forEach(key => {
+  salaryKeys().forEach(key => {
     const m = metric(key); if (!m) return;
     const b = document.createElement('button');
     b.className = 'lg';
@@ -495,8 +522,8 @@ function drawChart(){
   const box = document.getElementById('chartbox'); if (!box) return;
   const d = state.data, q = seq(), p = q.indexOf(state.week);
   const idxs = q.slice(Math.max(0, p - state.range + 1), p + 1);
-  const labels = idxs.map(k => d.weeks[k]);
-  const lines = SALARY.filter(k => state.on[k] && metric(k))
+  const labels = idxs.map(k => ds().weeks[k]);
+  const lines = salaryKeys().filter(k => state.on[k] && metric(k))
     .map(k => ({ key: k, m: metric(k), vals: idxs.map(x => metric(k).values[x] ?? null) }));
 
   if (!lines.length) { box.innerHTML = '<div class="loading">Включи хотя бы один показатель</div>'; return; }
@@ -602,7 +629,7 @@ function venueTable(i){
   const th = (key, label, cls) => '<th data-key="' + key + '" class="' + (cls || '') + '" aria-sort="' +
     (sortBy === key ? (sortDir < 0 ? 'descending' : 'ascending') : 'none') + '">' + label + '</th>';
 
-  return '<div class="panel"><h2>По ТРЦ · ' + granWord() + ' ' + esc(state.data.weeks[i]) + '</h2>' +
+  return '<div class="panel"><h2>По ТРЦ · ' + granWord() + ' ' + esc(ds().weeks[i]) + '</h2>' +
     '<div class="hint">Две последние колонки заполняются раз в месяц</div><div class="scroll"><table><thead><tr>' +
     th('name','ТРЦ') + th('guests','Гости с картой') + th('guestsAll','Гости всего') +
     th('revenue','Выручка карты') + th('avg','Средний чек') + th('ret','Возврат %') + th('cards','Выдано карт') +
@@ -632,7 +659,7 @@ function channelTable(i){
   chs.forEach(ch => ch.rows.forEach(r => { if (!names.includes(r.name)) names.push(r.name); }));
 
   let rows = [{ name: 'Сеть', net: true }].concat(names.map(n => ({ name: n, net: false })));
-  if (state.city !== 'Все города') {
+  if (state.tab === 'crm' && state.city !== 'Все города') {
     rows = rows.filter(r => r.net || r.name.toLowerCase().indexOf(state.city.toLowerCase().slice(0, 6)) === 0);
   }
 
@@ -642,7 +669,7 @@ function channelTable(i){
     return { now: vals[i] ?? null, prev: vals[prevOf(i)] ?? null };
   };
 
-  return '<div class="panel"><h2>Рассылки · ' + granWord() + ' ' + esc(state.data.weeks[i]) + '</h2>' +
+  return '<div class="panel"><h2>Рассылки · ' + granWord() + ' ' + esc(ds().weeks[i]) + '</h2>' +
     '<div class="hint">Процент открытий у Email, прочтений у ВК, конверсии у Телеграма</div><div class="scroll"><table><thead><tr>' +
     '<th>Канал</th>' + chs.map(ch => '<th>' + esc(ch.label) + '</th>').join('') +
     '</tr></thead><tbody>' +
@@ -709,6 +736,23 @@ function demoData(){
         booking:  {values:[], latest:71232-k*4200}
       }
     })),
+    site: {
+      weeks, kinds: weeks.map((_,i) => (i % 5 === 4 ? 'month' : 'week')),
+      metrics: [
+        {key:'conv',    label:'Конверсия в онлайн бронь (от посетителей)', unit:'%', values:wave(12,2,.03)},
+        {key:'conv2',   label:'Конверсия в онлайн бронь (от кликов)',      unit:'%', values:wave(52,5,.04)},
+        {key:'visitors',label:'Все посетители сайта',  unit:'', values:wave(8000,900,20)},
+        {key:'widget',  label:'Клик по виджету',       unit:'', values:wave(2000,250,6)},
+        {key:'booking', label:'Онлайн бронь',          unit:'', values:wave(850,90,2)},
+        {key:'newUsers',label:'Новые пользователи',    unit:'', values:wave(7500,800,18)},
+        {key:'oldUsers',label:'Старые пользователи',   unit:'', values:wave(2200,300,5)},
+        {key:'time',    label:'Время на сайте',        unit:'time', values:wave(230,20,.3)},
+        {key:'seo',     label:'SEO, переходы',         unit:'', values:wave(5300,600,12)},
+        {key:'seoPct',  label:'SEO, %',                unit:'%', values:wave(62,3,.02)},
+        {key:'bounce',  label:'Показатель отказов',    unit:'%', values:wave(17,2,.02)},
+        {key:'leads',   label:'Все лиды с сайта',      unit:'', values:wave(120,20,.5)}
+      ]
+    },
     channels: [
       {key:'email', label:'Email, % открытия', unit:'%', net:wave(10,2,.04),
        rows:cityNames.map((nm,k) => ({name:nm, values:wave(9+k*.4,2,.03)}))},
