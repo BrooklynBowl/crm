@@ -221,6 +221,20 @@ function prevOf(i){
 }
 function granWord(){ return state.gran === 'month' ? 'месяц' : 'неделя'; }
 
+/* последний период, где реально есть данные (нули будущих недель пропускаем) */
+function lastFilled(){
+  const q = seq();
+  const src = (state.tab === 'site' ? (state.data.site && state.data.site.metrics) : state.data.metrics) || [];
+  const keys = salaryKeys().concat(state.tab === 'site' ? ['visitors', 'booking'] : ['guests', 'rev']);
+  for (let p = q.length - 1; p >= 0; p--) {
+    const i = q[p];
+    const has = src.some(m => keys.indexOf(m.key) !== -1 &&
+      m.values[i] !== null && m.values[i] !== undefined && m.values[i] !== 0);
+    if (has) return i;
+  }
+  return q[q.length - 1];
+}
+
 const gate = document.getElementById('gate');
 const app  = document.getElementById('app');
 
@@ -260,7 +274,7 @@ async function start(){
 
 function afterLoad(stamp){
   document.getElementById('updated').textContent = 'обновлено ' + stamp;
-  state.week = seq().slice(-1)[0];
+  state.week = lastFilled();
   buildControls(); render();
 }
 document.getElementById('reload').addEventListener('click', start);
@@ -272,10 +286,10 @@ function buildControls(){
   q.forEach((idx, n) => {
     const o = document.createElement('option');
     o.value = idx;
-    o.textContent = ds().weeks[idx] + (n === q.length - 1 ? ' · последний' : '');
+    o.textContent = ds().weeks[idx] + (idx === lastFilled() ? ' · последний с данными' : '');
     w.appendChild(o);
   });
-  if (q.indexOf(state.week) === -1) state.week = q[q.length - 1];
+  if (q.indexOf(state.week) === -1) state.week = lastFilled();
   w.value = state.week;
   document.querySelector('label[for="week"]').textContent = state.gran === 'month' ? 'Месяц' : 'Неделя';
 
@@ -286,7 +300,7 @@ function buildControls(){
     const b = document.createElement('button');
     b.className = 'chip'; b.textContent = label;
     b.setAttribute('aria-pressed', k === state.tab);
-    b.onclick = () => { state.tab = k; state.week = seq().slice(-1)[0]; buildControls(); render(); };
+    b.onclick = () => { state.tab = k; state.week = lastFilled(); buildControls(); render(); };
     tb.appendChild(b);
   });
   document.getElementById('city').parentNode.style.display = state.tab === 'site' ? 'none' : '';
@@ -297,7 +311,7 @@ function buildControls(){
     const b = document.createElement('button');
     b.className = 'chip'; b.textContent = label;
     b.setAttribute('aria-pressed', k === state.gran);
-    b.onclick = () => { state.gran = k; state.week = seq().slice(-1)[0]; buildControls(); render(); };
+    b.onclick = () => { state.gran = k; state.week = lastFilled(); buildControls(); render(); };
     gr.appendChild(b);
   });
   w.onchange = () => { state.week = +w.value; render(); };
