@@ -356,6 +356,19 @@ function fmtDelta(d, unit, dec){
 function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function metric(key){ return (state.view || []).find(m => m.key === key) || null; }
 
+/* значение показателя так, как оно выглядит в таблице */
+function shown(m, i){
+  if (m && m.texts && m.texts[i]) return m.texts[i];
+  return fmt(at(m, i), m ? m.unit : '', m ? m.dec : null);
+}
+/* знаков после запятой в конкретной ячейке */
+function decAt(m, i){
+  const t = m && m.texts && m.texts[i];
+  if (!t) return (m && m.dec !== undefined) ? m.dec : null;
+  const q = t.replace(/\s/g, '').match(/[.,](\d+)/);
+  return q ? q[1].length : 0;
+}
+
 /* ТРЦ выбранного города */
 function venuesOfCity(){
   const all = state.data.venues || [];
@@ -447,10 +460,10 @@ function render(){
     }
     html += '<div class="frame">' +
       '<div class="bar"><b>' + esc(m.label) + '</b>' +
-      (plan != null ? '<span class="plan">план ' + fmt(plan, m.unit, m.dec) + '</span>' : '') + '</div>' +
-      '<div class="body"><div class="big">' + fmt(now, m.unit, m.dec) + '</div>' +
-      '<div class="side"><div class="delta' + (delta < 0 ? ' down' : '') + '">' + fmtDelta(delta, m.unit, m.dec) + '</div>' +
-      '<div class="prev">' + (state.gran === 'month' ? 'месяцем' : 'неделей') + ' раньше ' + fmt(prev, m.unit, m.dec) + '</div></div></div>' +
+      (plan != null ? '<span class="plan">план ' + fmt(plan, m.unit, decAt(m, i)) + '</span>' : '') + '</div>' +
+      '<div class="body"><div class="big">' + shown(m, i) + '</div>' +
+      '<div class="side"><div class="delta' + (delta < 0 ? ' down' : '') + '">' + fmtDelta(delta, m.unit, decAt(m, i)) + '</div>' +
+      '<div class="prev">' + (state.gran === 'month' ? 'месяцем' : 'неделей') + ' раньше ' + shown(m, prevOf(i)) + '</div></div></div>' +
       '<div class="foot">' + status + spark(m, i) + '</div></div>';
   });
   html += '</div>';
@@ -462,9 +475,9 @@ function render(){
     const now = at(m, i), prev = at(m, prevOf(i));
     const delta = (now !== null && prev !== null) ? now - prev : null;
     html += '<div class="tile"><div class="name">' + esc(m.label) + '</div>' +
-      '<div class="val">' + fmt(now, m.unit, m.dec) + '</div>' +
+      '<div class="val">' + shown(m, i) + '</div>' +
       '<div class="row"><span class="delta' + (delta < 0 ? ' down' : '') + '">' +
-      fmtDelta(delta, m.unit, m.dec) + '</span>' + spark(m, i) + '</div></div>';
+      fmtDelta(delta, m.unit, decAt(m, i)) + '</span>' + spark(m, i) + '</div></div>';
   });
   const g = metric('guestsAll'), rv = metric('rev');
   if (state.tab === 'crm' && g && rv) {
@@ -486,7 +499,7 @@ function render(){
       '<div class="hint">Заполняются раз в месяц — показано последнее значение</div><div class="tiles m">';
     mon.forEach(m => {
       html += '<div class="tile"><div class="name">' + esc(m.label) + '</div>' +
-        '<div class="val">' + fmt(m.latest, m.unit, m.dec) + '</div>' +
+        '<div class="val">' + (m.latestText || fmt(m.latest, m.unit, m.dec)) + '</div>' +
         '<div class="row"><span class="per">' + esc(m.latestLabel || '') + '</span></div></div>';
     });
     html += '</div></div>';
@@ -588,7 +601,7 @@ function drawChart(){
     k = Math.max(0, Math.min(labels.length - 1, k));
     guide.setAttribute('x1', x(k)); guide.setAttribute('x2', x(k)); guide.setAttribute('opacity', '1');
     tip.innerHTML = '<b>' + esc(labels[k]) + '</b>' + lines.map(l =>
-      '<div><span>' + esc(l.m.label) + '</span><span>' + fmt(l.vals[k], l.m.unit, l.m.dec) + '</span></div>').join('');
+      '<div><span>' + esc(l.m.label) + '</span><span>' + shown(l.m, idxs[k]) + '</span></div>').join('');
     tip.style.opacity = 1;
     const px = x(k) / W * r.width;
     tip.style.left = Math.min(Math.max(px - 60, 0), r.width - 210) + 'px';
