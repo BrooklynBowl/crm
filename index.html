@@ -114,6 +114,20 @@ tfoot td{font-weight:500;border-top:2px solid var(--ink);border-bottom:none}
 .loading{color:var(--mute);padding:40px 0;text-align:center}
 .hidden{display:none !important}
 
+/* ── вкладка ЗП ── */
+.zpwrap{display:grid;grid-template-columns:1fr 300px;gap:14px;align-items:start}
+.zpbig{font-family:Oswald,sans-serif;font-size:46px;font-weight:500;line-height:1;
+  font-variant-numeric:tabular-nums;margin:2px 0 4px}
+.zprow{display:flex;justify-content:space-between;gap:12px;font-size:14px;padding:7px 0;
+  border-bottom:1px solid var(--line)}
+.zprow:last-child{border-bottom:none}
+.zpgate{max-width:380px;background:var(--white);border-radius:16px;padding:22px;margin:8px auto}
+.zpgate input{width:100%;font-family:inherit;font-size:15px;padding:11px 16px;border:1px solid var(--line);
+  border-radius:800px;background:var(--cream);color:var(--ink);margin:12px 0}
+.zpgate .btn-red{width:100%;padding:11px}
+td .mcol{font-size:12px}
+@media (max-width:900px){ .zpwrap{grid-template-columns:1fr} }
+
 @media (max-width:900px){
   .frames{grid-template-columns:1fr}
   .tiles,.tiles.m{grid-template-columns:repeat(2,1fr)}
@@ -295,7 +309,7 @@ function buildControls(){
 
   const tb = document.getElementById('tabs');
   tb.innerHTML = '';
-  [['crm','CRM'], ['site','Сайт']].forEach(([k, label]) => {
+  [['crm','CRM'], ['site','Сайт'], ['zp','ЗП']].forEach(([k, label]) => {
     if (k === 'site' && !state.data.site) return;
     const b = document.createElement('button');
     b.className = 'chip'; b.textContent = label;
@@ -304,6 +318,7 @@ function buildControls(){
     tb.appendChild(b);
   });
   document.getElementById('city').parentNode.style.display = state.tab === 'site' ? 'none' : '';
+  document.querySelector('.controls').style.display = state.tab === 'zp' ? 'none' : '';
 
   const gr = document.getElementById('grans');
   gr.innerHTML = '';
@@ -437,6 +452,7 @@ function viewMonthly(){
 function at(m, i){ return m && m.values[i] !== undefined ? m.values[i] : null; }
 
 function render(){
+  if (state.tab === 'zp') { renderZp(); return; }
   const i = state.week;
   state.view = viewMetrics();
   let html = '';
@@ -788,6 +804,149 @@ function demoData(){
        rows:cityNames.map((nm,k) => ({name:nm, values:wave(.5+k*.1,.2,.001)}))}
     ]
   };
+}
+
+/* ═════════ ВКЛАДКА ЗП ═════════
+   Пароль проверяется на стороне таблицы: суммы приходят только вместе с ним.
+   В этом файле нет ни ступеней, ни окладов — открыв исходник, их не увидеть. */
+
+function zpPass(v){
+  try {
+    if (v === undefined) return sessionStorage.getItem('bb-zp') || '';
+    if (v) sessionStorage.setItem('bb-zp', v); else sessionStorage.removeItem('bb-zp');
+  } catch(e){}
+  return v || '';
+}
+
+async function loadZp(pass){
+  if (!API_URL) { state.zp = demoSalary(); return true; }
+  try {
+    const res = await fetch(API_URL + '?key=' + encodeURIComponent(savedKey()) +
+                            '&zp=' + encodeURIComponent(pass));
+    const j = await res.json();
+    if (!j.ok || !j.salary) return false;
+    state.zp = j.salary;
+    return true;
+  } catch(e){ return false; }
+}
+
+function zpForm(err){
+  return '<div class="zpgate"><h2 style="font-family:Oswald,sans-serif;font-weight:500;margin:0">Зарплата</h2>' +
+    '<p class="hint" style="margin:6px 0 0">Раздел закрыт отдельным паролем. Он спрашивается один раз за сеанс.</p>' +
+    '<input id="zp-key" type="password" placeholder="Пароль" autocomplete="off">' +
+    '<button class="btn btn-red" id="zp-go">Открыть</button>' +
+    '<div class="err">' + esc(err || '') + '</div></div>';
+}
+
+function bindZp(){
+  const go = () => {
+    const k = (document.getElementById('zp-key').value || '').trim();
+    if (!k) { state.zpErr = 'Введи пароль'; renderZp(); return; }
+    document.getElementById('content').innerHTML = '<div class="loading">Проверяем…</div>';
+    loadZp(k).then(ok => {
+      if (ok) { zpPass(k); state.zpErr = ''; render(); }
+      else { state.zpErr = 'Пароль не подошёл'; state.zpTried = 1; renderZp(); }
+    });
+  };
+  document.getElementById('zp-go').onclick = go;
+  document.getElementById('zp-key').onkeydown = e => { if (e.key === 'Enter') go(); };
+  document.getElementById('zp-key').focus();
+}
+
+function money(v){ return nf.format(Math.round(v)) + ' ₽'; }
+function pct1(v){ if (v === null || v === undefined) return '—';
+  return (Math.round(v * 10) / 10).toString().replace('.', ',') + '%'; }
+
+function renderZp(){
+  const box = document.getElementById('content');
+
+  if (!state.zp) {
+    const saved = zpPass();
+    if (saved && !state.zpTried) {
+      state.zpTried = 1;
+      box.innerHTML = '<div class="loading">Проверяем доступ…</div>';
+      loadZp(saved).then(ok => { if (ok) render(); else { zpPass(''); box.innerHTML = zpForm(''); bindZp(); } });
+      return;
+    }
+    box.innerHTML = zpForm(state.zpErr);
+    bindZp();
+    return;
+  }
+
+  const zp = state.zp;
+  if (zp.error) { box.innerHTML = '<div class="panel">Не получилось посчитать: ' + esc(zp.error) + '</div>'; return; }
+  if (!zp.months || !zp.months.length) {
+    box.innerHTML = '<div class="panel">Пока нет месяцев с данными. Считаем с августа — как только в таблице появится месячный столбец, он попадёт сюда.</div>';
+    return;
+  }
+
+  if (state.zpMonth === undefined || !zp.months[state.zpMonth]) state.zpMonth = zp.months.length - 1;
+  const m = zp.months[state.zpMonth];
+
+  let html = '<div class="controls" style="margin-bottom:22px"><div class="field"><label>Месяц</label>' +
+    '<div class="chips" id="zpm">' +
+    zp.months.map((x, k) => '<button class="chip" data-m="' + k + '" aria-pressed="' +
+      (k === state.zpMonth) + '">' + esc(x.label) + '</button>').join('') +
+    '</div></div></div>';
+
+  html += '<div class="zpwrap"><div class="panel" style="margin:0">' +
+    '<h2>' + esc(m.label) + '</h2>' +
+    '<table><thead><tr><th>Показатель</th><th>Факт</th><th>Ступень</th><th>Бонус</th>' +
+    '<th>До следующей ступени</th></tr></thead><tbody>';
+
+  m.rows.forEach(r => {
+    let tier = r.min === null ? '—' : 'от ' + r.min + '%';
+    let next = '—';
+    if (r.value === null) next = 'нет данных';
+    else if (r.nextMin === null) next = 'максимум';
+    else next = '+' + (r.nextMin - r.value).toFixed(1).replace('.', ',') + ' п.п. → ' + money(r.nextSum);
+    html += '<tr><td>' + esc(r.label) + '</td>' +
+      '<td>' + pct1(r.value) + '</td>' +
+      '<td class="mcol">' + tier + '</td>' +
+      '<td class="zp-sum">' + (r.sum ? money(r.sum) : '—') + '</td>' +
+      '<td class="mcol">' + next + '</td></tr>';
+  });
+
+  html += '</tbody><tfoot><tr><td>Бонус за месяц</td><td></td><td></td><td>' + money(m.bonus) +
+    '</td><td></td></tr></tfoot></table></div>';
+
+  html += '<div class="panel" style="margin:0"><div class="name" style="color:var(--mute);font-size:13px">' +
+    'К выплате за ' + esc(m.label.toLowerCase()) + '</div>' +
+    '<div class="zpbig">' + money(m.total) + '</div>' +
+    '<div class="zprow"><span>Фикс</span><span>' + money(zp.fix) + '</span></div>' +
+    '<div class="zprow"><span>Бонус</span><span>' + money(m.bonus) + '</span></div>' +
+    '<div class="hint" style="margin-top:12px">Максимум по бонусу — ' + money(135000) + '</div></div></div>';
+
+  if (zp.months.length > 1) {
+    html += '<div class="panel"><h2>По месяцам</h2><table><thead><tr><th>Месяц</th>' +
+      m.rows.map(r => '<th>' + esc(r.label.split(' ')[0]) + '</th>').join('') +
+      '<th>Бонус</th><th>Итого</th></tr></thead><tbody>' +
+      zp.months.map(x => '<tr><td>' + esc(x.label) + '</td>' +
+        x.rows.map(r => '<td>' + pct1(r.value) + '<span class="mcol" style="display:block">' +
+          (r.sum ? nf.format(r.sum) : '—') + '</span></td>').join('') +
+        '<td>' + money(x.bonus) + '</td><td>' + money(x.total) + '</td></tr>').join('') +
+      '</tbody></table></div>';
+  }
+
+  html += '<p class="note">Проценты берутся округлёнными — ровно как они показаны в таблице и на дашборде. ' +
+    'Ступень засчитывается по значению «больше или равно», зазоры между ступенями закрыты по нижней ' +
+    'границе следующей: 85% — ступени нет, 86% — первая, 91% — вторая.</p>';
+
+  box.innerHTML = html;
+  document.querySelectorAll('#zpm .chip').forEach(b => {
+    b.onclick = () => { state.zpMonth = +b.dataset.m; render(); };
+  });
+}
+
+/* демо-суммы, пока адрес API не вписан */
+function demoSalary(){
+  return { fix: 80000, months: [
+    { label:'Август', bonus:120000, total:200000, rows:[
+      {label:'Количество гостей по сети', value:99,   sum:15000, min:91,  nextMin:100, nextSum:20000},
+      {label:'Конверсия сайта в онлайн бронь', value:11.4, sum:40000, min:10, nextMin:null, nextSum:null},
+      {label:'Возврат гостей по карте гостя', value:30, sum:45000, min:30, nextMin:null, nextSum:null},
+      {label:'Открываемость рассылок', value:6,    sum:20000, min:5,   nextMin:11,  nextSum:25000}]}
+  ]};
 }
 
 if (savedKey() || !API_URL) start(); else openGate();
