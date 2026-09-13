@@ -195,7 +195,7 @@ const CITIES = {
 
 const SALARY = ['ret', 'email'];
 const SALARY_SITE = ['conv', 'conv2'];
-const SITE_OTHER  = ['visitors', 'widget', 'booking', 'newUsers', 'oldUsers', 'time', 'seo', 'seoPct', 'bounce', 'leads'];
+const SITE_OTHER  = ['visitors', 'widget', 'booking', 'newUsers', 'oldUsers', 'time', 'seo', 'seoPct', 'bounce'];
 const OTHER  = ['guests', 'guestsAll', 'rev', 'cards'];
 const COLORS = { ret: '#FF2026', email: '#191919', conv: '#FF2026', conv2: '#191919' };
 
@@ -749,8 +749,7 @@ function demoData(){
         {key:'time',    label:'Время на сайте',        unit:'time', values:wave(230,20,.3)},
         {key:'seo',     label:'SEO, переходы',         unit:'', values:wave(5300,600,12)},
         {key:'seoPct',  label:'SEO, %',                unit:'%', values:wave(62,3,.02)},
-        {key:'bounce',  label:'Показатель отказов',    unit:'%', values:wave(17,2,.02)},
-        {key:'leads',   label:'Все лиды с сайта',      unit:'', values:wave(120,20,.5)}
+        {key:'bounce',  label:'Показатель отказов',    unit:'%', values:wave(17,2,.02)}
       ]
     },
     channels: [
