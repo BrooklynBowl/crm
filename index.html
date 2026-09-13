@@ -283,12 +283,81 @@ function fmtDelta(d, unit){
   return s + nf.format(Math.round(d));
 }
 function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-function metric(key){ return (state.data.metrics || []).find(m => m.key === key) || null; }
+function metric(key){ return (state.view || []).find(m => m.key === key) || null; }
+
+/* ТРЦ выбранного города */
+function venuesOfCity(){
+  const all = state.data.venues || [];
+  if (state.city === 'Все города') return all;
+  return all.filter(v => cityOf(v.name) === state.city);
+}
+
+/* показатели пересчитываются под выбранный город */
+function viewMetrics(){
+  if (state.city === 'Все города') return state.data.metrics || [];
+  const vs = venuesOfCity(), n = state.data.weeks.length;
+  const src = k => (state.data.metrics || []).find(m => m.key === k) || {};
+
+  const sumOf = key => Array.from({length:n}, (_, k) => {
+    let s = null;
+    vs.forEach(v => { const b = v.data[key];
+      if (b && b.values && b.values[k] !== null && b.values[k] !== undefined) s = (s || 0) + b.values[k]; });
+    return s;
+  });
+  const ret = Array.from({length:n}, (_, k) => {
+    let num = 0, den = 0;
+    vs.forEach(v => {
+      const r = v.data.ret && v.data.ret.values[k], g = v.data.guests && v.data.guests.values[k];
+      if (r !== null && r !== undefined && g) { num += r * g; den += g; }
+    });
+    return den ? num / den : null;
+  });
+  const emailCh = (state.data.channels || []).find(c => c.key === 'email');
+  const cityRow = emailCh && emailCh.rows.find(r => r.name.toLowerCase().indexOf(state.city.toLowerCase().slice(0, 6)) === 0);
+
+  return [
+    { key:'ret',    label: src('ret').label   || 'Возврат гостей',        unit:'%', values: ret },
+    { key:'email',  label: src('email').label || 'Email % открытия',      unit:'%', values: cityRow ? cityRow.values : Array(n).fill(null) },
+    { key:'guests', label: src('guests').label|| 'Гости с картой',        unit:'',  values: sumOf('guests') },
+    { key:'rev',    label: src('rev').label   || 'Выручка карты',         unit:'₽', values: sumOf('revenue') },
+    { key:'cards',  label: src('cards').label || 'Выдано бонусных карт',  unit:'',  values: sumOf('cards') }
+  ];
+}
+
+/* месячные показатели под выбранный город */
+function viewMonthly(){
+  const mon = state.data.monthly || [];
+  if (state.city === 'Все города') return mon;
+  const vs = venuesOfCity();
+  const sumLatest = key => {
+    let s = null;
+    vs.forEach(v => { const b = v.data[key];
+      if (b && b.latest !== null && b.latest !== undefined) s = (s || 0) + b.latest; });
+    return s;
+  };
+  const find = k => mon.find(m => m.key === k) || {};
+  const out = [
+    { key:'basePrime', label:'Гостей в базе Primehill', unit:'',
+      latest: sumLatest('basePrime'), latestLabel: find('basePrime').latestLabel },
+    { key:'booking', label:'Бронирование, база', unit:'',
+      latest: sumLatest('booking'), latestLabel: find('booking').latestLabel }
+  ];
+  ['baseNet','revPlan','revFact','planDone'].forEach(k => {
+    const m = find(k);
+    if (m.label) out.push({ key:k, label: m.label + ' · по сети', unit:m.unit, latest:m.latest, latestLabel:m.latestLabel });
+  });
+  return out;
+}
 function at(m, i){ return m && m.values[i] !== undefined ? m.values[i] : null; }
 
 function render(){
   const i = state.week;
+  state.view = viewMetrics();
   let html = '';
+  if (state.city !== 'Все города') {
+    html += '<div class="hint" style="margin:-8px 0 14px">Всё ниже пересчитано по ТРЦ города «' +
+      esc(state.city) + '». Возврат % — средневзвешенный по гостям.</div>';
+  }
 
   /* карточки ЗП */
   html += '<div class="frames">';
@@ -338,7 +407,7 @@ function render(){
   html += '</div>';
 
   /* ежемесячные */
-  const mon = state.data.monthly || [];
+  const mon = viewMonthly();
   if (mon.length) {
     html += '<div class="panel"><h2>Ежемесячные показатели</h2>' +
       '<div class="hint">Заполняются раз в месяц — показано последнее значение</div><div class="tiles m">';
@@ -355,7 +424,7 @@ function render(){
     '<div class="legend" id="legend"></div></div><div class="chartbox" id="chartbox"></div></div>';
 
   html += venueTable(i);
-  html += cityTable(i);
+  html += channelTable(i);
 
   document.getElementById('content').innerHTML = html;
   drawLegend(); drawChart(); bindSort();
@@ -519,23 +588,38 @@ function venueTable(i){
     '</td><td></td></tr></tfoot></table></div></div>';
 }
 
-/* ── Email по городам ── */
-function cityTable(i){
-  let rows = (state.data.cities || []).map(c => ({
-    name: c.name,
-    now: c.values[i] !== undefined ? c.values[i] : null,
-    prev: c.values[i - 1] !== undefined ? c.values[i - 1] : null
-  }));
-  if (state.city !== 'Все города') rows = rows.filter(r => r.name.toLowerCase().includes(state.city.toLowerCase().slice(0, 6)));
-  if (!rows.length) return '';
-  return '<div class="panel"><h2>Email, % открытия по городам</h2><div class="scroll"><table><thead><tr>' +
-    '<th>Город</th><th>Неделя</th><th>Прошлая</th><th>Δ</th></tr></thead><tbody>' +
-    rows.map(r => {
-      const d = (r.now !== null && r.prev !== null) ? r.now - r.prev : null;
-      return '<tr><td>' + esc(r.name) + '</td><td>' + fmt(r.now, '%') + '</td>' +
-        '<td>' + fmt(r.prev, '%') + '</td><td class="delta' + (d < 0 ? ' down' : '') + '">' +
-        fmtDelta(d, '%') + '</td></tr>';
-    }).join('') + '</tbody></table></div></div>';
+/* ── Рассылки: Email / ВК / ТГ, по сети и городам ── */
+function channelTable(i){
+  const chs = state.data.channels || [];
+  if (!chs.length) return '';
+
+  const names = [];
+  chs.forEach(ch => ch.rows.forEach(r => { if (!names.includes(r.name)) names.push(r.name); }));
+
+  let rows = [{ name: 'Сеть', net: true }].concat(names.map(n => ({ name: n, net: false })));
+  if (state.city !== 'Все города') {
+    rows = rows.filter(r => r.net || r.name.toLowerCase().indexOf(state.city.toLowerCase().slice(0, 6)) === 0);
+  }
+
+  const cell = (ch, r) => {
+    const vals = r.net ? ch.net : (ch.rows.find(x => x.name === r.name) || {}).values;
+    if (!vals) return { now: null, prev: null };
+    return { now: vals[i] ?? null, prev: vals[i - 1] ?? null };
+  };
+
+  return '<div class="panel"><h2>Рассылки · неделя ' + esc(state.data.weeks[i]) + '</h2>' +
+    '<div class="hint">Процент открытий у Email, прочтений у ВК, конверсии у Телеграма</div><div class="scroll"><table><thead><tr>' +
+    '<th>Канал</th>' + chs.map(ch => '<th>' + esc(ch.label) + '</th>').join('') +
+    '</tr></thead><tbody>' +
+    rows.map(r => '<tr><td>' + (r.net ? '<b>' + esc(r.name) + '</b>' : esc(r.name)) + '</td>' +
+      chs.map(ch => {
+        const c = cell(ch, r);
+        const d = (c.now !== null && c.prev !== null) ? c.now - c.prev : null;
+        return '<td>' + fmt(c.now, '%') +
+          (d === null ? '' : '<span class="tcity delta' + (d < 0 ? ' down' : '') + '">' + fmtDelta(d, '%') + '</span>') +
+          '</td>';
+      }).join('') + '</tr>').join('') +
+    '</tbody></table></div></div>';
 }
 
 function bindSort(){
@@ -587,7 +671,14 @@ function demoData(){
         booking:  {values:[], latest:71232-k*4200}
       }
     })),
-    cities: cityNames.map((nm,k) => ({name:nm, key:'emailOpen', values:wave(9+k*.4,2,.03)}))
+    channels: [
+      {key:'email', label:'Email, % открытия', unit:'%', net:wave(10,2,.04),
+       rows:cityNames.map((nm,k) => ({name:nm, values:wave(9+k*.4,2,.03)}))},
+      {key:'vk', label:'ВК, % прочтения', unit:'%', net:wave(46,3,.02),
+       rows:cityNames.map((nm,k) => ({name:nm, values:wave(44+k,4,.02)}))},
+      {key:'tg', label:'ТГ, % конверсии', unit:'%', net:wave(.7,.2,.001),
+       rows:cityNames.map((nm,k) => ({name:nm, values:wave(.5+k*.1,.2,.001)}))}
+    ]
   };
 }
 
