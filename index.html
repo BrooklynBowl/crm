@@ -337,19 +337,19 @@ function buildControls(){
 }
 
 const nf = new Intl.NumberFormat('ru-RU');
-function fmt(v, unit){
+function fmt(v, unit, dec){
   if (v === null || v === undefined || isNaN(v)) return '—';
   if (unit === 'time') { const m = Math.floor(v / 60), sec = Math.round(v % 60);
     return m + ':' + (sec < 10 ? '0' : '') + sec; }
-  if (unit === '%') return v.toFixed(1).replace('.', ',') + '%';
+  if (unit === '%') return v.toFixed(dec === null || dec === undefined ? 1 : dec).replace('.', ',') + '%';
   if (unit === '₽') return nf.format(Math.round(v)) + ' ₽';
   return nf.format(Math.round(v));
 }
-function fmtDelta(d, unit){
+function fmtDelta(d, unit, dec){
   if (d === null || d === undefined || isNaN(d)) return '—';
   const s = d > 0 ? '▲ +' : (d < 0 ? '▼ ' : '');
   if (unit === 'time') return s + Math.round(Math.abs(d)) + ' сек';
-  if (unit === '%') return s + d.toFixed(1).replace('.', ',') + ' п.п.';
+  if (unit === '%') return s + d.toFixed(dec === null || dec === undefined ? 1 : dec).replace('.', ',') + ' п.п.';
   if (unit === '₽') return s + nf.format(Math.round(d)) + ' ₽';
   return s + nf.format(Math.round(d));
 }
@@ -447,10 +447,10 @@ function render(){
     }
     html += '<div class="frame">' +
       '<div class="bar"><b>' + esc(m.label) + '</b>' +
-      (plan != null ? '<span class="plan">план ' + fmt(plan, m.unit) + '</span>' : '') + '</div>' +
-      '<div class="body"><div class="big">' + fmt(now, m.unit) + '</div>' +
-      '<div class="side"><div class="delta' + (delta < 0 ? ' down' : '') + '">' + fmtDelta(delta, m.unit) + '</div>' +
-      '<div class="prev">' + (state.gran === 'month' ? 'месяцем' : 'неделей') + ' раньше ' + fmt(prev, m.unit) + '</div></div></div>' +
+      (plan != null ? '<span class="plan">план ' + fmt(plan, m.unit, m.dec) + '</span>' : '') + '</div>' +
+      '<div class="body"><div class="big">' + fmt(now, m.unit, m.dec) + '</div>' +
+      '<div class="side"><div class="delta' + (delta < 0 ? ' down' : '') + '">' + fmtDelta(delta, m.unit, m.dec) + '</div>' +
+      '<div class="prev">' + (state.gran === 'month' ? 'месяцем' : 'неделей') + ' раньше ' + fmt(prev, m.unit, m.dec) + '</div></div></div>' +
       '<div class="foot">' + status + spark(m, i) + '</div></div>';
   });
   html += '</div>';
@@ -462,9 +462,9 @@ function render(){
     const now = at(m, i), prev = at(m, prevOf(i));
     const delta = (now !== null && prev !== null) ? now - prev : null;
     html += '<div class="tile"><div class="name">' + esc(m.label) + '</div>' +
-      '<div class="val">' + fmt(now, m.unit) + '</div>' +
+      '<div class="val">' + fmt(now, m.unit, m.dec) + '</div>' +
       '<div class="row"><span class="delta' + (delta < 0 ? ' down' : '') + '">' +
-      fmtDelta(delta, m.unit) + '</span>' + spark(m, i) + '</div></div>';
+      fmtDelta(delta, m.unit, m.dec) + '</span>' + spark(m, i) + '</div></div>';
   });
   const g = metric('guestsAll'), rv = metric('rev');
   if (state.tab === 'crm' && g && rv) {
@@ -486,7 +486,7 @@ function render(){
       '<div class="hint">Заполняются раз в месяц — показано последнее значение</div><div class="tiles m">';
     mon.forEach(m => {
       html += '<div class="tile"><div class="name">' + esc(m.label) + '</div>' +
-        '<div class="val">' + fmt(m.latest, m.unit) + '</div>' +
+        '<div class="val">' + fmt(m.latest, m.unit, m.dec) + '</div>' +
         '<div class="row"><span class="per">' + esc(m.latestLabel || '') + '</span></div></div>';
     });
     html += '</div></div>';
@@ -588,7 +588,7 @@ function drawChart(){
     k = Math.max(0, Math.min(labels.length - 1, k));
     guide.setAttribute('x1', x(k)); guide.setAttribute('x2', x(k)); guide.setAttribute('opacity', '1');
     tip.innerHTML = '<b>' + esc(labels[k]) + '</b>' + lines.map(l =>
-      '<div><span>' + esc(l.m.label) + '</span><span>' + fmt(l.vals[k], l.m.unit) + '</span></div>').join('');
+      '<div><span>' + esc(l.m.label) + '</span><span>' + fmt(l.vals[k], l.m.unit, l.m.dec) + '</span></div>').join('');
     tip.style.opacity = 1;
     const px = x(k) / W * r.width;
     tip.style.left = Math.min(Math.max(px - 60, 0), r.width - 210) + 'px';
