@@ -419,7 +419,7 @@ function viewMetrics(){
     return den ? num / den : null;
   });
   const emailCh = (state.data.channels || []).find(c => c.key === 'email');
-  const cityRow = emailCh && emailCh.rows.find(r => r.name.toLowerCase().indexOf(state.city.toLowerCase().slice(0, 6)) === 0);
+  const cityRow = emailCh && emailCh.rows.find(r => r.name.trim().toLowerCase() === state.city.toLowerCase());
 
   return [
     { key:'ret',    label: src('ret').label   || 'Возврат гостей',        unit:'%', values: ret },
@@ -706,29 +706,33 @@ function channelTable(i){
   if (!chs.length) return '';
 
   const names = [];
-  chs.forEach(ch => ch.rows.forEach(r => { if (!names.includes(r.name)) names.push(r.name); }));
+  chs.forEach(ch => ch.rows.forEach(r => {
+    const nm = r.name.trim();
+    if (nm.toLowerCase() !== 'сеть' && !names.includes(nm)) names.push(nm);
+  }));
 
   let rows = [{ name: 'Сеть', net: true }].concat(names.map(n => ({ name: n, net: false })));
   if (state.tab === 'crm' && state.city !== 'Все города') {
-    rows = rows.filter(r => r.net || r.name.toLowerCase().indexOf(state.city.toLowerCase().slice(0, 6)) === 0);
+    rows = rows.filter(r => r.net || r.name.toLowerCase() === state.city.toLowerCase());
   }
 
   const cell = (ch, r) => {
-    const vals = r.net ? ch.net : (ch.rows.find(x => x.name === r.name) || {}).values;
+    const vals = r.net ? ch.net : (ch.rows.find(x => x.name.trim() === r.name) || {}).values;
     if (!vals) return { now: null, prev: null };
     return { now: vals[i] ?? null, prev: vals[prevOf(i)] ?? null };
   };
 
   return '<div class="panel"><h2>Рассылки · ' + granWord() + ' ' + esc(ds().weeks[i]) + '</h2>' +
-    '<div class="hint">Процент открытий у Email, прочтений у ВК, конверсии у Телеграма</div><div class="scroll"><table><thead><tr>' +
+    '<div class="hint">Процент открытий и выручка у Email, прочтений у ВК, конверсии у Телеграма. Прочерк — в таблице нет данных или ошибка формулы</div><div class="scroll"><table><thead><tr>' +
     '<th>Канал</th>' + chs.map(ch => '<th>' + esc(ch.label) + '</th>').join('') +
     '</tr></thead><tbody>' +
     rows.map(r => '<tr><td>' + (r.net ? '<b>' + esc(r.name) + '</b>' : esc(r.name)) + '</td>' +
       chs.map(ch => {
         const c = cell(ch, r);
         const d = (c.now !== null && c.prev !== null) ? c.now - c.prev : null;
-        return '<td>' + fmt(c.now, '%') +
-          (d === null ? '' : '<span class="tcity delta' + (d < 0 ? ' down' : '') + '">' + fmtDelta(d, '%') + '</span>') +
+        const u = ch.unit || '%';
+        return '<td>' + fmt(c.now, u) +
+          (d === null ? '' : '<span class="tcity delta' + (d < 0 ? ' down' : '') + '">' + fmtDelta(d, u) + '</span>') +
           '</td>';
       }).join('') + '</tr>').join('') +
     '</tbody></table></div></div>';
@@ -805,6 +809,8 @@ function demoData(){
     channels: [
       {key:'email', label:'Email, % открытия', unit:'%', net:wave(10,2,.04),
        rows:cityNames.map((nm,k) => ({name:nm, values:wave(9+k*.4,2,.03)}))},
+      {key:'emailRev', label:'Email, выручка', unit:'₽', net:wave(180000,40000,500),
+       rows:cityNames.map((nm,k) => ({name:nm, values:wave(15000+k*4000,5000,100)}))},
       {key:'vk', label:'ВК, % прочтения', unit:'%', net:wave(46,3,.02),
        rows:cityNames.map((nm,k) => ({name:nm, values:wave(44+k,4,.02)}))},
       {key:'tg', label:'ТГ, % конверсии', unit:'%', net:wave(.7,.2,.001),
